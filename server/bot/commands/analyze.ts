@@ -96,6 +96,63 @@ function validateTokenAddress(address: string): boolean {
   return evmPattern.test(address) || solanaPattern.test(address);
 }
 
+export function createTokenEmbed(analysis: any, tokenContract: string, chain: string): EmbedBuilder {
+  const sentiment = analyzeMarketSentiment(analysis);
+  const chainEmoji = getChainEmoji(chain);
+  const embedColor = getEmbedColor(analysis.priceChange24h);
+
+  return new EmbedBuilder()
+    .setColor(embedColor)
+    .setTitle(`${chainEmoji} ${analysis.name} (${analysis.symbol})`)
+    .setDescription(`**Token Analysis on ${chain.charAt(0).toUpperCase() + chain.slice(1)}** 🔍\n\nContract: \`${tokenContract}\``)
+    .setThumbnail('attachment://TBD_logo-removebg-preview.png')
+    .addFields(
+      { 
+        name: '💰 __Price Information__',
+        value: [
+          `**Current Price:** ${formatUSD(analysis.priceUsd)}`,
+          `**24h Change:** ${formatPercentage(analysis.priceChange24h)}`,
+          `**1h Change:** ${formatPercentage(analysis.priceChange1h)}`
+        ].join('\n'),
+        inline: false
+      },
+      {
+        name: '📊 __Market Metrics__',
+        value: [
+          `**Market Cap:** ${formatUSD(analysis.marketCap)}`,
+          analysis.fdv ? `**FDV:** ${formatUSD(analysis.fdv)}` : null,
+          `**Volume (24h):** ${formatUSD(analysis.volume?.h24)}`
+        ].filter(Boolean).join('\n'),
+        inline: true
+      },
+      {
+        name: '💧 __Liquidity Info__',
+        value: [
+          `**Current:** ${formatUSD(analysis.liquidity?.usd)}`,
+          analysis.liquidity?.change24h !== undefined ?
+            `**24h Change:** ${formatPercentage(analysis.liquidity.change24h)}` : null
+        ].filter(Boolean).join('\n'),
+        inline: true
+      },
+      {
+        name: '📈 __Trading Activity__',
+        value: analysis.transactions ?
+          formatTransactions(analysis.transactions.buys24h, analysis.transactions.sells24h) :
+          '*No transaction data available* ⚠️',
+        inline: false
+      },
+      {
+        name: '🎯 __Market Sentiment__',
+        value: sentiment.join('\n'),
+        inline: false
+      }
+    )
+    .setTimestamp()
+    .setFooter({ 
+      text: `Powered by chefs for the cooks 👨‍🍳` 
+    });
+}
+
 export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply();
 
@@ -122,62 +179,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       return;
     }
 
-    console.log(`Token analysis received:`, analysis);
-
-    const sentiment = analyzeMarketSentiment(analysis);
-    const chainEmoji = getChainEmoji(chain);
-    const embedColor = getEmbedColor(analysis.priceChange24h);
-
-    const embed = new EmbedBuilder()
-      .setColor(embedColor)
-      .setTitle(`${chainEmoji} ${analysis.name} (${analysis.symbol})`)
-      .setDescription(`**Token Analysis on ${chain.charAt(0).toUpperCase() + chain.slice(1)}** 🔍\n\nContract: \`${tokenContract}\``)
-      .setThumbnail('attachment://TBD_logo-removebg-preview.png')
-      .addFields(
-        { 
-          name: '💰 __Price Information__',
-          value: [
-            `**Current Price:** ${formatUSD(analysis.priceUsd)}`,
-            `**24h Change:** ${formatPercentage(analysis.priceChange24h)}`,
-            `**1h Change:** ${formatPercentage(analysis.priceChange1h)}`
-          ].join('\n'),
-          inline: false
-        },
-        {
-          name: '📊 __Market Metrics__',
-          value: [
-            `**Market Cap:** ${formatUSD(analysis.marketCap)}`,
-            analysis.fdv ? `**FDV:** ${formatUSD(analysis.fdv)}` : null,
-            `**Volume (24h):** ${formatUSD(analysis.volume?.h24)}`
-          ].filter(Boolean).join('\n'),
-          inline: true
-        },
-        {
-          name: '💧 __Liquidity Info__',
-          value: [
-            `**Current:** ${formatUSD(analysis.liquidity?.usd)}`,
-            analysis.liquidity?.change24h !== undefined ?
-              `**24h Change:** ${formatPercentage(analysis.liquidity.change24h)}` : null
-          ].filter(Boolean).join('\n'),
-          inline: true
-        },
-        {
-          name: '📈 __Trading Activity__',
-          value: analysis.transactions ?
-            formatTransactions(analysis.transactions.buys24h, analysis.transactions.sells24h) :
-            '*No transaction data available* ⚠️',
-          inline: false
-        },
-        {
-          name: '🎯 __Market Sentiment__',
-          value: sentiment.join('\n'),
-          inline: false
-        }
-      )
-      .setTimestamp()
-      .setFooter({ 
-        text: `Powered by chefs for the cooks 👨‍🍳` 
-      });
+    const embed = createTokenEmbed(analysis, tokenContract, chain);
 
     await interaction.editReply({ 
       embeds: [embed],

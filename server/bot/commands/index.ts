@@ -4,9 +4,17 @@ import * as analyzeWalletCommand from "./analyze-wallet";
 import * as helpCommand from "./help";
 import * as statusCommand from "./status";
 import { startPriceTracking } from "../utils/price-tracker";
+import { detectChain } from "../utils/blockchain";
+import { getTokenAnalysis } from "../utils/dexscreener";
 
 const commands = [analyzeCommand, analyzeWalletCommand, helpCommand, statusCommand];
 const GUILD_ID = '995147630009139252';
+
+// Contract address detection regex patterns
+const CONTRACT_PATTERNS = {
+  evm: /0x[a-fA-F0-9]{40}/g,
+  solana: /[1-9A-HJ-NP-Za-km-z]{32,44}/g
+};
 
 export async function setupCommands(client: Client) {
   // Create a collection of all commands
@@ -38,6 +46,46 @@ export async function setupCommands(client: Client) {
           ephemeral: true 
         });
       }
+    }
+  });
+
+  // Add message event listener for contract detection
+  client.on(Events.MessageCreate, async message => {
+    // Ignore bot messages and commands
+    if (message.author.bot || message.content.startsWith('/')) return;
+
+    try {
+      // Look for EVM and Solana contract addresses
+      const evmContracts = message.content.match(CONTRACT_PATTERNS.evm) || [];
+      const solanaContracts = message.content.match(CONTRACT_PATTERNS.solana) || [];
+      const contracts = [...evmContracts, ...solanaContracts];
+
+      // Process first found contract address
+      if (contracts.length > 0) {
+        const contract = contracts[0];
+        console.log(`Detected contract address in message: ${contract}`);
+
+        // Detect chain and get analysis
+        const chain = await detectChain(contract);
+        if (!chain) return;
+
+        const analysis = await getTokenAnalysis(contract, chain);
+        if (!analysis) return;
+
+        // Create embed response
+        const embed = analyzeCommand.createTokenEmbed(analysis, contract, chain);
+
+        // Reply with analysis
+        await message.reply({ 
+          embeds: [embed],
+          files: [{
+            attachment: './attached_assets/TBD_logo-removebg-preview.png',
+            name: 'TBD_logo-removebg-preview.png'
+          }]
+        });
+      }
+    } catch (error) {
+      console.error('Error processing message for contracts:', error);
     }
   });
 
