@@ -26,10 +26,18 @@ export interface HolderAnalysis {
       percentageOfCategory: number;
       rankInCategory: number;
     };
+    positionMetrics?: {
+      percentOfLiquidity: number;
+      sizeCategory: 'small' | 'medium' | 'large';  // Based on % of liquidity
+      riskLevel: 'low' | 'medium' | 'high';      // Based on position size and market impact
+    };
+    tradingPattern?: {
+      pattern: 'accumulation' | 'distribution' | 'swing' | 'hold';
+      confidence: number;  // 0-1 score of pattern confidence
+      description: string;
+    };
   };
 }
-
-// Holder categories for analysis
 
 // Test tokens across chains
 const ANALYSIS_TOKENS = {
@@ -151,6 +159,16 @@ export async function analyzeHolderMetrics(
     const percentageOfCategory = totalCategoryValue > 0 ? (totalValue / totalCategoryValue) * 100 : 0;
     const rankInCategory = allHolderValues.filter(v => v > totalValue).length + 1;
 
+    // Calculate position metrics
+    const positionMetrics = tokenInfo.liquidity?.usd ? {
+      percentOfLiquidity: (totalValue / tokenInfo.liquidity.usd) * 100,
+      sizeCategory: determineSizeCategory(totalValue, tokenInfo.liquidity.usd),
+      riskLevel: determineRiskLevel(totalValue, tokenInfo.liquidity.usd, volumeMetrics?.marketImpact || 0)
+    } : undefined;
+
+    // Analyze trading pattern
+    const tradingPattern = analyzeTradingPattern(analysis);
+
     // Calculate holding period based on transaction patterns
     const estimatedDays = numberOfTrades > 0 ? Math.min(90, numberOfTrades * 15) : 0;
 
@@ -169,13 +187,82 @@ export async function analyzeHolderMetrics(
         categoryMetrics: {
           percentageOfCategory,
           rankInCategory
-        }
+        },
+        positionMetrics,
+        tradingPattern
       }
     };
   } catch (error) {
     console.error(`Error analyzing holder ${address}:`, error);
     return null;
   }
+}
+
+function determineSizeCategory(
+  positionValue: number,
+  liquidityUsd: number
+): 'small' | 'medium' | 'large' {
+  const percentage = (positionValue / liquidityUsd) * 100;
+  if (percentage < 1) return 'small';
+  if (percentage < 5) return 'medium';
+  return 'large';
+}
+
+function determineRiskLevel(
+  positionValue: number,
+  liquidityUsd: number,
+  marketImpact: number
+): 'low' | 'medium' | 'high' {
+  const liquidityPercentage = (positionValue / liquidityUsd) * 100;
+
+  if (liquidityPercentage > 10 || marketImpact > 50) return 'high';
+  if (liquidityPercentage > 3 || marketImpact > 20) return 'medium';
+  return 'low';
+}
+
+function analyzeTradingPattern(
+  analysis: {
+    buyCount: number;
+    sellCount: number;
+    totalBought: number;
+    totalSold: number;
+    currentHoldings: number;
+  }
+): { pattern: 'accumulation' | 'distribution' | 'swing' | 'hold'; confidence: number; description: string } {
+  const buyRatio = analysis.totalBought / (analysis.totalBought + analysis.totalSold);
+  const sellRatio = analysis.totalSold / (analysis.totalBought + analysis.totalSold);
+  const holdingsRatio = analysis.currentHoldings / analysis.totalBought;
+
+  // Determine pattern and confidence
+  if (analysis.buyCount === 0 && analysis.sellCount === 0) {
+    return {
+      pattern: 'hold',
+      confidence: 1,
+      description: 'No trading activity detected'
+    };
+  }
+
+  if (buyRatio > 0.7 && holdingsRatio > 0.8) {
+    return {
+      pattern: 'accumulation',
+      confidence: buyRatio,
+      description: 'Strong buying activity with high retention'
+    };
+  }
+
+  if (sellRatio > 0.7 && holdingsRatio < 0.2) {
+    return {
+      pattern: 'distribution',
+      confidence: sellRatio,
+      description: 'Significant selling activity with low retention'
+    };
+  }
+
+  return {
+    pattern: 'swing',
+    confidence: Math.min(buyRatio, sellRatio) * 2,
+    description: 'Mixed buying and selling activity'
+  };
 }
 
 export async function analyzeAllHolders() {
@@ -220,6 +307,20 @@ export async function analyzeAllHolders() {
             console.log(`\nCategory Metrics:`);
             console.log(`% of Category Value: ${analysis.metrics.categoryMetrics.percentageOfCategory.toFixed(2)}%`);
             console.log(`Rank in Category: #${analysis.metrics.categoryMetrics.rankInCategory}`);
+          }
+
+          if (analysis.metrics.positionMetrics) {
+            console.log(`\nPosition Metrics:`);
+            console.log(`% of Liquidity: ${analysis.metrics.positionMetrics.percentOfLiquidity.toFixed(2)}%`);
+            console.log(`Size Category: ${analysis.metrics.positionMetrics.sizeCategory}`);
+            console.log(`Risk Level: ${analysis.metrics.positionMetrics.riskLevel}`);
+          }
+
+          if (analysis.metrics.tradingPattern) {
+            console.log(`\nTrading Pattern:`);
+            console.log(`Pattern: ${analysis.metrics.tradingPattern.pattern}`);
+            console.log(`Confidence: ${(analysis.metrics.tradingPattern.confidence * 100).toFixed(1)}%`);
+            console.log(`Description: ${analysis.metrics.tradingPattern.description}`);
           }
         }
       }
