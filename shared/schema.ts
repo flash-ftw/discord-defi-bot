@@ -9,7 +9,6 @@ export const transactions = pgTable("transactions", {
   amount: numeric("amount").notNull(),
   priceUsd: numeric("price_usd").notNull(),
   timestamp: timestamp("timestamp").notNull(),
-  chain: text("chain").notNull(),
   type: text("type").notNull(), // "buy" or "sell"
 });
 
