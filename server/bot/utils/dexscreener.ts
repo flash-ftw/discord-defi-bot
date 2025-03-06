@@ -28,16 +28,26 @@ interface TokenData {
 
 export async function getTokenData(tokenContract: string, chain: Chain): Promise<TokenData | null> {
   try {
+    console.log(`Fetching token data from DexScreener for ${tokenContract}`);
     const response = await axios.get<DexScreenerResponse>(
       `${DEXSCREENER_API}/dex/tokens/${tokenContract}`
     );
 
     if (!response.data?.pairs?.length) {
-      throw new Error(`No pairs found for token ${tokenContract}`);
+      console.log(`No pairs found for token ${tokenContract}`);
+      return null;
     }
+
+    // Log all found pairs for debugging
+    console.log('Found pairs:', response.data.pairs.map(p => ({
+      chainId: p.chainId,
+      dexId: p.dexId,
+      symbol: p.baseToken.symbol
+    })));
 
     // Find the first pair with liquidity
     const pair = response.data.pairs[0];
+    console.log(`Using pair on chain ${pair.chainId} from DEX ${pair.dexId}`);
 
     return {
       chainId: pair.chainId,

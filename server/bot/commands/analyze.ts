@@ -17,6 +17,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   try {
     const tokenContract = interaction.options.getString('token', true);
+    console.log(`Analyzing token contract: ${tokenContract}`);
 
     // Detect which chain the token is on
     const chain = await detectChain(tokenContract);
@@ -25,12 +26,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       return;
     }
 
+    console.log(`Detected chain: ${chain}`);
+
     // Get token data from DexScreener
     const tokenData = await getTokenData(tokenContract, chain);
     if (!tokenData) {
       await interaction.editReply('❌ Failed to fetch token data.');
       return;
     }
+
+    console.log(`Token data received:`, tokenData);
 
     await interaction.editReply({
       content: `**Token Analysis**\n` +
