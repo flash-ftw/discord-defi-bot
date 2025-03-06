@@ -20,7 +20,7 @@ async function getTrendingTokens(): Promise<string[]> {
     '🥇 **[ETH](https://www.coingecko.com/en/coins/ethereum)** ⟠ `$2,213` (+5.2%)',
     '🥈 **[SOL](https://www.coingecko.com/en/coins/solana)** ◎ `$144.1` (+3.8%)',
     '🥉 **[AVAX](https://www.coingecko.com/en/coins/avalanche)** 🔺 `$35.4` (+2.1%)',
-    '4️⃣ **[MATIC](https://www.coingecko.com/en/coins/polygon)** 💜 `$1.12` (+1.8%)',
+    '4️⃣ **[BNB](https://www.coingecko.com/en/coins/binance-coin)** 💛 `$382` (+1.8%)',
     '5️⃣ **[LINK](https://www.coingecko.com/en/coins/chainlink)** 🔗 `$18.45` (+4.2%)'
   ];
   return trendingTokens;
@@ -34,18 +34,18 @@ async function getVolumeLeaders(): Promise<{
   // Placeholder for volume leaders - will be enhanced with real data
   return {
     h24: [
-      '🥇 **[USDT](https://www.coingecko.com/en/coins/tether)** `$50.2B`',
-      '🥈 **[ETH](https://www.coingecko.com/en/coins/ethereum)** `$25.1B`',
-      '🥉 **[USDC](https://www.coingecko.com/en/coins/usd-coin)** `$15.5B`'
+      '🥇 **[ETH](https://www.coingecko.com/en/coins/ethereum)** `$25.1B`',
+      '🥈 **[BNB](https://www.coingecko.com/en/coins/binance-coin)** `$12.3B`',
+      '🥉 **[SOL](https://www.coingecko.com/en/coins/solana)** `$8.5B`'
     ],
     h1: [
       '🥇 **[ETH](https://www.coingecko.com/en/coins/ethereum)** `$1.2B`',
-      '🥈 **[USDT](https://www.coingecko.com/en/coins/tether)** `$950M`',
-      '🥉 **[SOL](https://www.coingecko.com/en/coins/solana)** `$425M`'
+      '🥈 **[SOL](https://www.coingecko.com/en/coins/solana)** `$425M`',
+      '🥉 **[AVAX](https://www.coingecko.com/en/coins/avalanche)** `$310M`'
     ],
     m10: [
       '🥇 **[ETH](https://www.coingecko.com/en/coins/ethereum)** `$180M`',
-      '🥈 **[USDT](https://www.coingecko.com/en/coins/tether)** `$145M`'
+      '🥈 **[SOL](https://www.coingecko.com/en/coins/solana)** `$85M`'
     ]
   };
 }
@@ -71,16 +71,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       .setDescription('**Real-time cryptocurrency market analysis** 📊')
       .setThumbnail('attachment://TBD_logo-removebg-preview.png')
       .addFields(
-        {
-          name: '⟠ __Major Tokens__',
-          value: [
-            `**[ETH](https://www.coingecko.com/en/coins/ethereum):** ${formatPrice(prices.ethereum.price)} 💎`,
-            `**24h:** ${formatPriceChange(prices.ethereum.change24h)} 📊\n`,
-            `**[SOL](https://www.coingecko.com/en/coins/solana):** ${formatPrice(prices.solana.price)} 💫`,
-            `**24h:** ${formatPriceChange(prices.solana.change24h)} 📈`
-          ].join('\n'),
-          inline: false
-        },
         {
           name: '🔥 __Trending Tokens__',
           value: trendingTokens.join('\n'),
