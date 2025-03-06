@@ -86,7 +86,7 @@ export function startPriceTracking(client: Client) {
         `${(prices.solana.price / 1000).toFixed(1)}K` :
         prices.solana.price.toFixed(1);
 
-      const status = `ETH $ ${ethPrice} | SOL $ ${solPrice}`; // Exactly matching requested format
+      const status = `ETH $${ethPrice} | SOL $${solPrice}`; // Exactly matching requested format
       // ActivityType options:
       // 0 = Playing
       // 1 = Streaming
