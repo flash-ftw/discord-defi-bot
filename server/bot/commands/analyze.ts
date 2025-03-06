@@ -8,7 +8,7 @@ export const data = new SlashCommandBuilder()
   .addStringOption(option =>
     option
       .setName('token')
-      .setDescription('Token contract address')
+      .setDescription('Token contract address to analyze (e.g., USDT: 0xdac17f958d2ee523a2206206994597c13d831ec7)')
       .setRequired(true)
   );
 

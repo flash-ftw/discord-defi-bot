@@ -39,18 +39,26 @@ export async function setupCommands(client: Client) {
     }
   });
 
-  // Register the commands for the specific guild
-  try {
-    const guild = client.guilds.cache.get(GUILD_ID);
-    if (!guild) {
-      console.error(`Could not find guild with ID ${GUILD_ID}`);
-      return;
-    }
+  // Wait for client to be ready before registering commands
+  client.once(Events.ClientReady, async () => {
+    try {
+      const guild = client.guilds.cache.get(GUILD_ID);
+      if (!guild) {
+        console.error(`Could not find guild with ID ${GUILD_ID}`);
+        return;
+      }
 
-    console.log(`Registering commands for guild: ${guild.name} (${GUILD_ID})`);
-    await guild.commands.set(commands.map(cmd => cmd.data));
-    console.log('Successfully registered application commands for the guild.');
-  } catch (error) {
-    console.error('Error registering application commands:', error);
-  }
+      console.log(`Registering commands for guild: ${guild.name} (${GUILD_ID})`);
+      console.log('Commands to register:', commands.map(cmd => cmd.data.name));
+
+      const registeredCommands = await guild.commands.set(commands.map(cmd => cmd.data));
+      console.log('Successfully registered commands:', registeredCommands.map(cmd => cmd.name));
+    } catch (error) {
+      console.error('Error registering application commands:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+        console.error('Stack trace:', error.stack);
+      }
+    }
+  });
 }
