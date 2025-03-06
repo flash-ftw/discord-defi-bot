@@ -132,6 +132,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       .setColor(embedColor)
       .setTitle(`${chainEmoji} ${analysis.name} (${analysis.symbol})`)
       .setDescription(`**Token Analysis on ${chain.charAt(0).toUpperCase() + chain.slice(1)}** 🔍\n\nContract: \`${tokenContract}\``)
+      .setThumbnail('attachment://TBD_logo-removebg-preview.png')
       .addFields(
         { 
           name: '💰 __Price Information__',
@@ -178,7 +179,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         text: `Powered by chefs for the cooks 👨‍🍳` 
       });
 
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ 
+      embeds: [embed],
+      files: [{
+        attachment: './attached_assets/TBD_logo-removebg-preview.png',
+        name: 'TBD_logo-removebg-preview.png'
+      }]
+    });
 
   } catch (error) {
     console.error('Error in analyze command:', error);

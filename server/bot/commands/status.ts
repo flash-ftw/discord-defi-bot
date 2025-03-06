@@ -20,6 +20,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       .setColor(0x5865F2) // Discord blurple color
       .setTitle('🎯 __Live Market Prices__')
       .setDescription('**Real-time cryptocurrency price tracking** 📊')
+      .setThumbnail('attachment://TBD_logo-removebg-preview.png')
       .addFields(
         {
           name: '⟠ __Ethereum (ETH)__',
@@ -43,7 +44,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         text: `Last Updated: ${prices.ethereum.lastUpdated.toLocaleTimeString()} | Powered by CoinGecko 🦎` 
       });
 
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ 
+      embeds: [embed],
+      files: [{
+        attachment: './attached_assets/TBD_logo-removebg-preview.png',
+        name: 'TBD_logo-removebg-preview.png'
+      }]
+    });
   } catch (error) {
     console.error('Error in status command:', error);
     await interaction.editReply('❌ An error occurred while fetching prices.');
