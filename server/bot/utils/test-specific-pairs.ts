@@ -36,6 +36,8 @@ async function testSpecificPairs() {
       if (analysis) {
         console.log("\nP&L Analysis Results:");
         console.log(`Current Price: $${analysis.currentPrice.toFixed(6)}`);
+        console.log(`Buy Transactions: ${analysis.buyCount} trades`);
+        console.log(`Sell Transactions: ${analysis.sellCount} trades`);
         console.log(`Total Bought: ${analysis.totalBought.toLocaleString()} tokens @ $${analysis.averageBuyPrice.toFixed(6)}`);
         console.log(`Total Sold: ${analysis.totalSold.toLocaleString()} tokens @ $${analysis.averageSellPrice.toFixed(6)}`);
         console.log(`Current Holdings: ${analysis.currentHoldings.toLocaleString()} tokens`);

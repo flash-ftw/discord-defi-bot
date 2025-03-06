@@ -12,35 +12,20 @@ const chainMapping: Record<string, Chain> = {
   'sol': 'solana'
 };
 
-// List of major DEXes by chain
-const majorDexes: Record<Chain, string[]> = {
-  'ethereum': ['uniswap', 'sushiswap', 'pancakeswap'],
-  'base': ['baseswap', 'pancakeswap', 'uniswap'],
-  'avalanche': ['traderjoe', 'pangolin', 'sushiswap'],
-  'solana': ['raydium', 'orca', 'meteora']
-};
-
 export async function detectChain(tokenContract: string): Promise<Chain | null> {
   try {
-    // Use DexScreener API to detect which chain the token is on
-    const response = await getTokenAnalysis(tokenContract, "ethereum"); // Try any chain first
+    const response = await getTokenAnalysis(tokenContract, "ethereum");
     if (response) {
-      // DexScreener response includes chainId which we can use to determine the chain
       const chainId = response.chainId.toLowerCase();
-
-      // Try to match the chainId with our supported chains
       for (const [key, value] of Object.entries(chainMapping)) {
         if (chainId.includes(key)) {
           if (value === null) {
             console.log(`Skipping unsupported chain: ${chainId}`);
             continue;
           }
-          console.log(`Detected chain ${value} from chainId ${chainId}`);
           return value;
         }
       }
-
-      console.log(`Unsupported chain detected: ${chainId}`);
     }
   } catch (error) {
     console.error("Error detecting chain:", error);
@@ -54,7 +39,6 @@ export async function getTransactionHistory(
   chain: Chain
 ): Promise<InsertTransaction[]> {
   try {
-    // Use DexScreener API to fetch current token price
     const response = await getTokenAnalysis(tokenContract, chain);
     if (!response) {
       console.log(`No transaction data found for token ${tokenContract} on ${chain}`);
@@ -64,49 +48,187 @@ export async function getTransactionHistory(
     const currentPrice = response.priceUsd;
     const timestamp = new Date();
 
-    // Generate more realistic transaction scenarios based on current price
-    const mockTransactions: InsertTransaction[] = [
-      // Initial entry - large buy at -20% from current price (7 days ago)
-      {
-        walletAddress,
-        tokenContract,
-        amount: "10000",
-        priceUsd: (currentPrice * 0.8).toString(),
-        timestamp: new Date(timestamp.getTime() - 7 * 24 * 60 * 60 * 1000),
-        chain,
-        type: "buy"
-      },
-      // Add position - medium buy at -10% (5 days ago)
-      {
-        walletAddress,
-        tokenContract,
-        amount: "5000",
-        priceUsd: (currentPrice * 0.9).toString(),
-        timestamp: new Date(timestamp.getTime() - 5 * 24 * 60 * 60 * 1000),
-        chain,
-        type: "buy"
-      },
-      // Take profit - small sell at +15% (3 days ago)
-      {
-        walletAddress,
-        tokenContract,
-        amount: "3000",
-        priceUsd: (currentPrice * 1.15).toString(),
-        timestamp: new Date(timestamp.getTime() - 3 * 24 * 60 * 60 * 1000),
-        chain,
-        type: "sell"
-      },
-      // Take profit - medium sell at +10% (1 day ago)
-      {
-        walletAddress,
-        tokenContract,
-        amount: "5000",
-        priceUsd: (currentPrice * 1.1).toString(),
-        timestamp: new Date(timestamp.getTime() - 1 * 24 * 60 * 60 * 1000),
-        chain,
-        type: "sell"
-      }
-    ];
+    // Generate unique transaction patterns based on wallet address
+    const walletSeed = parseInt(walletAddress.slice(-4), 16);
+    const patternType = walletSeed % 6; // Expanded to 6 different patterns
+
+    let mockTransactions: InsertTransaction[] = [];
+
+    switch(patternType) {
+      case 0: // Long term holder - early entry, small profit taking
+        mockTransactions = [
+          {
+            walletAddress,
+            tokenContract,
+            amount: "100000",
+            priceUsd: (currentPrice * 0.4).toString(),
+            timestamp: new Date(timestamp.getTime() - 90 * 24 * 60 * 60 * 1000),
+            chain,
+            type: "buy"
+          },
+          {
+            walletAddress,
+            tokenContract,
+            amount: "20000",
+            priceUsd: (currentPrice * 1.2).toString(),
+            timestamp: new Date(timestamp.getTime() - 30 * 24 * 60 * 60 * 1000),
+            chain,
+            type: "sell"
+          }
+        ];
+        break;
+
+      case 1: // Active trader - multiple entries and exits
+        mockTransactions = [
+          {
+            walletAddress,
+            tokenContract,
+            amount: "50000",
+            priceUsd: (currentPrice * 0.8).toString(),
+            timestamp: new Date(timestamp.getTime() - 14 * 24 * 60 * 60 * 1000),
+            chain,
+            type: "buy"
+          },
+          {
+            walletAddress,
+            tokenContract,
+            amount: "30000",
+            priceUsd: (currentPrice * 0.9).toString(),
+            timestamp: new Date(timestamp.getTime() - 10 * 24 * 60 * 60 * 1000),
+            chain,
+            type: "buy"
+          },
+          {
+            walletAddress,
+            tokenContract,
+            amount: "45000",
+            priceUsd: (currentPrice * 1.15).toString(),
+            timestamp: new Date(timestamp.getTime() - 5 * 24 * 60 * 60 * 1000),
+            chain,
+            type: "sell"
+          },
+          {
+            walletAddress,
+            tokenContract,
+            amount: "25000",
+            priceUsd: (currentPrice * 1.1).toString(),
+            timestamp: new Date(timestamp.getTime() - 1 * 24 * 60 * 60 * 1000),
+            chain,
+            type: "sell"
+          }
+        ];
+        break;
+
+      case 2: // Recent buyer - single entry
+        mockTransactions = [
+          {
+            walletAddress,
+            tokenContract,
+            amount: "75000",
+            priceUsd: (currentPrice * 0.95).toString(),
+            timestamp: new Date(timestamp.getTime() - 3 * 24 * 60 * 60 * 1000),
+            chain,
+            type: "buy"
+          }
+        ];
+        break;
+
+      case 3: // Swing trader - multiple cycles
+        mockTransactions = [
+          {
+            walletAddress,
+            tokenContract,
+            amount: "60000",
+            priceUsd: (currentPrice * 0.7).toString(),
+            timestamp: new Date(timestamp.getTime() - 21 * 24 * 60 * 60 * 1000),
+            chain,
+            type: "buy"
+          },
+          {
+            walletAddress,
+            tokenContract,
+            amount: "40000",
+            priceUsd: (currentPrice * 1.3).toString(),
+            timestamp: new Date(timestamp.getTime() - 14 * 24 * 60 * 60 * 1000),
+            chain,
+            type: "sell"
+          },
+          {
+            walletAddress,
+            tokenContract,
+            amount: "50000",
+            priceUsd: (currentPrice * 0.85).toString(),
+            timestamp: new Date(timestamp.getTime() - 7 * 24 * 60 * 60 * 1000),
+            chain,
+            type: "buy"
+          },
+          {
+            walletAddress,
+            tokenContract,
+            amount: "30000",
+            priceUsd: (currentPrice * 1.2).toString(),
+            timestamp: new Date(timestamp.getTime() - 2 * 24 * 60 * 60 * 1000),
+            chain,
+            type: "sell"
+          }
+        ];
+        break;
+
+      case 4: // Complete exit - profitable
+        mockTransactions = [
+          {
+            walletAddress,
+            tokenContract,
+            amount: "80000",
+            priceUsd: (currentPrice * 0.6).toString(),
+            timestamp: new Date(timestamp.getTime() - 45 * 24 * 60 * 60 * 1000),
+            chain,
+            type: "buy"
+          },
+          {
+            walletAddress,
+            tokenContract,
+            amount: "80000",
+            priceUsd: (currentPrice * 1.4).toString(),
+            timestamp: new Date(timestamp.getTime() - 15 * 24 * 60 * 60 * 1000),
+            chain,
+            type: "sell"
+          }
+        ];
+        break;
+
+      case 5: // Accumulator - multiple buys, no sells
+        mockTransactions = [
+          {
+            walletAddress,
+            tokenContract,
+            amount: "30000",
+            priceUsd: (currentPrice * 1.1).toString(),
+            timestamp: new Date(timestamp.getTime() - 30 * 24 * 60 * 60 * 1000),
+            chain,
+            type: "buy"
+          },
+          {
+            walletAddress,
+            tokenContract,
+            amount: "40000",
+            priceUsd: (currentPrice * 0.9).toString(),
+            timestamp: new Date(timestamp.getTime() - 15 * 24 * 60 * 60 * 1000),
+            chain,
+            type: "buy"
+          },
+          {
+            walletAddress,
+            tokenContract,
+            amount: "50000",
+            priceUsd: (currentPrice * 0.8).toString(),
+            timestamp: new Date(timestamp.getTime() - 5 * 24 * 60 * 60 * 1000),
+            chain,
+            type: "buy"
+          }
+        ];
+        break;
+    }
 
     return mockTransactions;
   } catch (error) {
@@ -124,8 +246,8 @@ interface PnLAnalysis {
   unrealizedPnL: number;
   realizedPnL: number;
   currentPrice: number;
-  buyCount: number;   // Number of buy transactions
-  sellCount: number;  // Number of sell transactions
+  buyCount: number;
+  sellCount: number;
 }
 
 export async function analyzePnL(
@@ -165,9 +287,8 @@ export async function analyzePnL(
 
     const currentHoldings = totalBought - totalSold;
     const averageBuyPrice = totalBoughtValue / totalBought;
-    const averageSellPrice = totalSoldValue / totalSold;
+    const averageSellPrice = totalSoldValue / (totalSold || 1); //Corrected to avoid division by zero
 
-    // Calculate P&L
     const realizedPnL = totalSoldValue - (totalSold * averageBuyPrice);
     const unrealizedPnL = currentHoldings * (currentPrice - averageBuyPrice);
 
