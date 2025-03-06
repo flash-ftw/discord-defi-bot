@@ -9,6 +9,7 @@ export const transactions = pgTable("transactions", {
   amount: numeric("amount").notNull(),
   priceUsd: numeric("price_usd").notNull(),
   timestamp: timestamp("timestamp").notNull(),
+  chain: text("chain").notNull(),
   type: text("type").notNull(), // "buy" or "sell"
 });
 
@@ -18,3 +19,6 @@ export const insertTransactionSchema = createInsertSchema(transactions).omit({
 
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 export type Transaction = typeof transactions.$inferSelect;
+
+export const supportedChains = ['ethereum', 'base', 'avalanche'] as const;
+export type Chain = typeof supportedChains[number];
