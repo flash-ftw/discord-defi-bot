@@ -76,13 +76,7 @@ export async function setupCommands(client: Client) {
         const embed = analyzeCommand.createTokenEmbed(analysis, contract, chain);
 
         // Reply with analysis
-        await message.reply({ 
-          embeds: [embed],
-          files: [{
-            attachment: './attached_assets/TBD_logo-removebg-preview.png',
-            name: 'TBD_logo-removebg-preview.png'
-          }]
-        });
+        await message.reply({ embeds: [embed] });
       }
     } catch (error) {
       console.error('Error processing message for contracts:', error);

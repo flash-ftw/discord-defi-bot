@@ -96,7 +96,7 @@ function validateTokenAddress(address: string): boolean {
   return evmPattern.test(address) || solanaPattern.test(address);
 }
 
-export function createTokenEmbed(analysis: any, tokenContract: string, chain: string): EmbedBuilder {
+function createTokenEmbed(analysis: any, tokenContract: string, chain: string): EmbedBuilder {
   const sentiment = analyzeMarketSentiment(analysis);
   const chainEmoji = getChainEmoji(chain);
   const embedColor = getEmbedColor(analysis.priceChange24h);
@@ -117,7 +117,6 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
     .setColor(embedColor)
     .setTitle(`${chainEmoji} ${analysis.name} (${analysis.symbol})`)
     .setDescription(`**Token Analysis on ${chain.charAt(0).toUpperCase() + chain.slice(1)}** 🔍\n\nContract: \`${tokenContract}\``)
-    .setThumbnail(analysis.logo)
     .addFields(
       { 
         name: '💰 __Price Information__',
@@ -186,7 +185,6 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
         inline: false
       }
     )
-    .setImage('attachment://TBD_logo-removebg-preview.png')
     .setTimestamp()
     .setFooter({ 
       text: `Powered by chefs for the cooks 👨‍🍳` 
@@ -211,8 +209,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       return;
     }
 
-    console.log(`Detected chain: ${chain}`);
-
     const analysis = await getTokenAnalysis(tokenContract, chain);
     if (!analysis) {
       await interaction.editReply('❌ Failed to fetch token analysis. The token might not have enough liquidity or trading activity.');
@@ -220,14 +216,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     }
 
     const embed = createTokenEmbed(analysis, tokenContract, chain);
-
-    await interaction.editReply({ 
-      embeds: [embed],
-      files: [{
-        attachment: './attached_assets/TBD_logo-removebg-preview.png',
-        name: 'TBD_logo-removebg-preview.png'
-      }]
-    });
+    await interaction.editReply({ embeds: [embed] });
 
   } catch (error) {
     console.error('Error in analyze command:', error);
