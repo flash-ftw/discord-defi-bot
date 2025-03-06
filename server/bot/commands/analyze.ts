@@ -113,6 +113,45 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
     imageLens: `https://lens.google.com/uploadbyurl?url=${encodeURIComponent(analysis.logo)}`
   };
 
+  // Format holders in a single line
+  const holdersLine = analysis.holders ? 
+    analysis.holders.slice(0, 5)
+      .map((holder: any, index: number) => `${['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][index]} ${holder.percentage}%`)
+      .join(' • ') :
+    '*Holder data not available* ⚠️';
+
+  // Generate trading links with replaced contract address
+  const tradingLinks = [
+    `[MAE](https://t.me/MaestroSniperBot?start=${tokenContract}-rickburpbot)`,
+    `[BAN](https://t.me/BananaGun_bot?start=snp_rickburpbot_${tokenContract})`,
+    `[BNK](https://t.me/mcqueen_bonkbot?start=ref_rickbot_ca_${tokenContract})`,
+    `[SHU](https://t.me/ShurikenTradeBot?start=qt-RickSanchez-${tokenContract})`,
+    `[PEP](https://t.me/pepeboost_sol_bot?start=ref_0xRick_ca_${tokenContract})`,
+    `[MVX](https://mevx.io/solana/${tokenContract}?ref=RickBot)`,
+    `[BLO](https://t.me/BloomSolanaEU2_bot?start=ref_RickBot_ca_${tokenContract})`,
+    `[TRO](https://t.me/paris_trojanbot?start=d-RickBot-${tokenContract})`,
+    `[STB](https://t.me/SolTradingBot?start=${tokenContract}-yqC7cGy1T)`,
+    `[PHO](https://photon-sol.tinyastro.io/en/lp/JBJ9sq8Kt6V7ikeNE8dPXFCtMb9wPY3y4VzFXG1JAHQW)`,
+    `[NEO](https://neo.bullx.io/login?redirectUrl=terminal%3FchainId%3D1399811149%26address%3D${tokenContract})`,
+    `[GMG](https://gmgn.ai/sol/token/LbosYDck_${tokenContract})`,
+    `[EXP](https://solscan.io/token/${tokenContract})`,
+    `[TW](https://x.com/search?q=${tokenContract})`,
+    `[PRO](https://t.me/MaestroProBot?start=${tokenContract}-rickburpbot)`,
+    `[AXI](https://ape.pro/solana/${tokenContract}?ref=RPXHyi9dQHMl)`,
+    `[APE](https://bullx.io/terminal?chainId=1399811149&address=${tokenContract})`,
+    `[BLX](https://trade.padre.gg/sign-in?backToUrl=%2Ftrade%2Fsolana%2F${tokenContract})`,
+    `[PDR](https://trade.padre.gg/sign-in?backToUrl=%2Ftrade%2Fsolana%2F${tokenContract})`,
+    `[NOV](https://t.me/TradeonNovaBot?start=r-rick-${tokenContract})`,
+    `[CAL](https://t.me/CallAnalyserBot?start=${tokenContract})`
+  ];
+
+  // Split trading links into rows
+  const tradingRows = [
+    tradingLinks.slice(0, 7).join('⋅'),
+    tradingLinks.slice(7, 14).join('⋅'),
+    tradingLinks.slice(14).join('⋅')
+  ];
+
   return new EmbedBuilder()
     .setColor(embedColor)
     .setTitle(`${chainEmoji} ${analysis.name} (${analysis.symbol})`)
@@ -150,11 +189,7 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
       },
       {
         name: '👥 __Top Holders__',
-        value: analysis.holders ? 
-          analysis.holders.slice(0, 5).map((holder: any, index: number) => 
-            `${['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][index]} \`${holder.address.slice(0, 6)}...${holder.address.slice(-4)}\`: ${holder.percentage}%`
-          ).join('\n') :
-          '*Holder data not available* ⚠️',
+        value: holdersLine,
         inline: false
       },
       {
@@ -175,6 +210,11 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
       {
         name: '🎯 __Market Sentiment__',
         value: sentiment.join('\n'),
+        inline: false
+      },
+      {
+        name: '🚀 __TRADE NOW__',
+        value: tradingRows.join('\n'),
         inline: false
       },
       {
