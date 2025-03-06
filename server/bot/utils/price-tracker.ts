@@ -75,15 +75,20 @@ export function startPriceTracking(client: Client) {
   async function updateStatus() {
     try {
       const prices = await getTokenPrices();
-      
+
       if (!prices.ethereum || !prices.solana) {
         console.error('Failed to fetch prices for status update');
         return;
       }
 
-      const status = `ETH: ${formatPrice(prices.ethereum.price)} | SOL: ${formatPrice(prices.solana.price)}`;
+      const ethPrice = Math.round(prices.ethereum.price);
+      const solPrice = prices.solana.price >= 1000 ? 
+        `${(prices.solana.price/1000).toFixed(1)}K` : 
+        prices.solana.price.toFixed(1);
+
+      const status = `ETH${ethPrice}•SOL${solPrice}`; // Ultra compact format with bullet separator
       await client.user?.setActivity(status, { type: 3 }); // Type 3 is "Watching"
-      
+
       console.log('Updated bot status with prices:', status);
     } catch (error) {
       console.error('Error updating bot status:', error);
