@@ -1,9 +1,33 @@
-import axios from "axios";
 import { Chain } from "@shared/schema";
+import axios from "axios";
 import NodeCache from "node-cache";
 
 const DEXSCREENER_API = "https://api.dexscreener.com/latest";
 const cache = new NodeCache({ stdTTL: 300 }); // 5 minutes cache
+
+// Price validation ranges with more accurate thresholds
+const PRICE_RANGES = {
+  'WETH': { min: 2000, max: 3000 },
+  'cbETH': { min: 2000, max: 3000 },
+  'WAVAX': { min: 15, max: 30 },
+  'BONK': { min: 0.000001, max: 0.0001 }
+};
+
+// List of major DEXes by chain
+const majorDexes: Record<Chain, string[]> = {
+  'ethereum': ['uniswap', 'sushiswap', 'pancakeswap'],
+  'base': ['baseswap', 'pancakeswap', 'uniswap'],
+  'avalanche': ['traderjoe', 'pangolin', 'sushiswap'],
+  'solana': ['raydium', 'orca', 'meteora']
+};
+
+// Minimum liquidity thresholds by chain (in USD)
+const MIN_LIQUIDITY = {
+  'ethereum': 1000000,    // $1M min for Ethereum
+  'base': 100000,         // $100k min for Base
+  'avalanche': 50000,     // $50k min for Avalanche
+  'solana': 10000         // $10k min for Solana
+};
 
 interface DexScreenerPair {
   chainId: string;
@@ -39,10 +63,6 @@ interface DexScreenerPair {
   };
 }
 
-interface DexScreenerResponse {
-  pairs: DexScreenerPair[];
-}
-
 interface TokenAnalysis {
   chainId: string;
   symbol: string;
@@ -76,6 +96,46 @@ interface TokenAnalysis {
   };
 }
 
+function isValidPrice(symbol: string, price: number): boolean {
+  const range = PRICE_RANGES[symbol];
+  if (!range) return true; // Skip validation for unknown tokens
+  return price >= range.min && price <= range.max;
+}
+
+function filterValidPairs(pairs: DexScreenerPair[], chain: Chain): DexScreenerPair[] {
+  return pairs.filter(pair => {
+    // Check if pair is on the correct chain
+    const chainId = pair.chainId.toLowerCase();
+    if (!chainId.includes(chain.toLowerCase())) {
+      console.log(`Skipping pair on chain ${chainId}, expecting ${chain}`);
+      return false;
+    }
+
+    // Validate price if we have a range for this token
+    const price = parseFloat(pair.priceUsd);
+    if (PRICE_RANGES[pair.baseToken.symbol] && !isValidPrice(pair.baseToken.symbol, price)) {
+      console.log(`Filtered out ${pair.dexId} pair with invalid price: $${price} (expected range: $${PRICE_RANGES[pair.baseToken.symbol].min}-${PRICE_RANGES[pair.baseToken.symbol].max})`);
+      return false;
+    }
+
+    // Check minimum liquidity based on chain
+    const minLiquidity = MIN_LIQUIDITY[chain] || 10000;
+    if (!pair.liquidity?.usd || pair.liquidity.usd < minLiquidity) {
+      console.log(`Filtered out ${pair.dexId} pair with insufficient liquidity: $${pair.liquidity?.usd || 0} (minimum: $${minLiquidity})`);
+      return false;
+    }
+
+    // Prefer pairs from major DEXes
+    const majorDexList = majorDexes[chain] || [];
+    if (!majorDexList.includes(pair.dexId.toLowerCase())) {
+      console.log(`Note: ${pair.dexId} is not in the list of major DEXes for ${chain}`);
+    }
+
+    console.log(`Valid pair found: ${pair.dexId} on ${chainId} with $${pair.liquidity?.usd.toLocaleString()} liquidity and price $${price}`);
+    return true;
+  });
+}
+
 export async function getTokenAnalysis(tokenContract: string, chain: Chain): Promise<TokenAnalysis | null> {
   const cacheKey = `${chain}:${tokenContract}`;
   const cached = cache.get<TokenAnalysis>(cacheKey);
@@ -84,7 +144,7 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
   }
 
   try {
-    console.log(`Fetching token analysis from DexScreener for ${tokenContract}`);
+    console.log(`Fetching token analysis from DexScreener for ${tokenContract} on ${chain}`);
     const response = await axios.get<DexScreenerResponse>(
       `${DEXSCREENER_API}/dex/tokens/${tokenContract}`
     );
@@ -94,8 +154,15 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
       return null;
     }
 
+    // Filter valid pairs for the specified chain
+    const validPairs = filterValidPairs(response.data.pairs, chain);
+    if (!validPairs.length) {
+      console.log(`No valid pairs found for token ${tokenContract} on ${chain}`);
+      return null;
+    }
+
     // Sort pairs by liquidity and volume to find the main pair
-    const sortedPairs = response.data.pairs.sort((a, b) => {
+    const sortedPairs = validPairs.sort((a, b) => {
       const aScore = (a.liquidity?.usd || 0) + (a.volume?.h24 || 0);
       const bScore = (b.liquidity?.usd || 0) + (b.volume?.h24 || 0);
       return bScore - aScore;
@@ -103,13 +170,13 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
 
     // Get the first pair with highest liquidity and volume
     const pair = sortedPairs[0];
-    console.log(`Selected pair on chain ${pair.chainId} from DEX ${pair.dexId}`);
+    console.log(`Selected primary pair: ${pair.dexId} on ${pair.chainId}`);
+    console.log(`Price: $${pair.priceUsd}, Liquidity: $${pair.liquidity?.usd?.toLocaleString()}, Volume: $${pair.volume?.h24?.toLocaleString()}`);
 
     // Calculate price differentials across DEXes
-    const validPairs = sortedPairs.filter(p => p.liquidity?.usd && p.liquidity.usd > 10000); // Only consider pairs with >$10k liquidity
     let priceDifferential;
-    if (validPairs.length > 1) {
-      const prices = validPairs.map(p => ({
+    if (sortedPairs.length > 1) {
+      const prices = sortedPairs.map(p => ({
         price: parseFloat(p.priceUsd),
         dex: p.dexId
       }));
@@ -119,10 +186,9 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
       const minDex = prices.find(p => p.price === minPrice)?.dex || '';
       const spreadPercent = ((maxPrice - minPrice) / minPrice) * 100;
 
-      console.log(`Price differentials: Max ${maxPrice} (${maxDex}), Min ${minPrice} (${minDex}), Spread ${spreadPercent.toFixed(2)}%`);
+      console.log(`Price differentials: Max $${maxPrice} (${maxDex}), Min $${minPrice} (${minDex}), Spread ${spreadPercent.toFixed(2)}%`);
       priceDifferential = { maxPrice, minPrice, maxDex, minDex, spreadPercent };
     }
-
 
     const analysis: TokenAnalysis = {
       chainId: pair.chainId,
@@ -161,4 +227,8 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
     }
     return null;
   }
+}
+
+interface DexScreenerResponse {
+  pairs: DexScreenerPair[];
 }
