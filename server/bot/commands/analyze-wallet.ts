@@ -19,22 +19,22 @@ export const data = new SlashCommandBuilder()
   );
 
 function formatUSD(value: number): string {
-  return `$${value.toLocaleString(undefined, { 
+  return `\`$${value.toLocaleString(undefined, { 
     minimumFractionDigits: 2,
     maximumFractionDigits: 6 
-  })}`;
+  })}\``;
 }
 
 function formatPercentage(value: number): string {
-  const sign = value >= 0 ? '📈' : '📉';
-  const color = value >= 0 ? '🟢' : '🔴';
-  return `${sign} ${color} ${Math.abs(value).toFixed(2)}%`;
+  const sign = value >= 0 ? '🚀' : '🔻';
+  const color = value >= 0 ? '💚' : '❤️';
+  return `${sign} ${color} \`${Math.abs(value).toFixed(2)}%\``;
 }
 
 function getChainEmoji(chain: string): string {
   switch(chain.toLowerCase()) {
     case 'ethereum': return '⟠';
-    case 'base': return '🔵';
+    case 'base': return '🔷';
     case 'avalanche': return '🔺';
     case 'solana': return '◎';
     default: return '🔗';
@@ -46,7 +46,7 @@ function getEmbedColor(pnlPercent: number): number {
   if (pnlPercent > 0) return 0x90EE90; // Light green
   if (pnlPercent < -20) return 0xff0000; // Strong red
   if (pnlPercent < 0) return 0xFFCCCB; // Light red
-  return 0xFFFFFF; // White for neutral
+  return 0x5865F2; // Discord blurple for neutral
 }
 
 function validateAddresses(walletAddress: string, tokenContract: string): boolean {
@@ -101,46 +101,46 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const embed = new EmbedBuilder()
       .setColor(embedColor)
       .setTitle(`${chainEmoji} ${tokenInfo.name} (${tokenInfo.symbol}) Wallet Analysis`)
-      .setDescription(`Chain: ${chain.charAt(0).toUpperCase() + chain.slice(1)}`)
+      .setDescription(`**Analyzing trades on ${chain.charAt(0).toUpperCase() + chain.slice(1)}** 🔍`)
       .addFields(
         {
-          name: '💰 Token Information',
-          value: `Current Price: ${formatUSD(tokenInfo.priceUsd)}`,
+          name: '💰 __Token Information__',
+          value: `**Current Price:** ${formatUSD(tokenInfo.priceUsd)} 📊`,
           inline: false
         },
         {
-          name: '📊 Transaction Summary',
+          name: '📊 __Transaction Summary__',
           value: [
-            `Buy Transactions: ${analysis.buyCount} trades 📥`,
-            `Sell Transactions: ${analysis.sellCount} trades 📤`
+            `**Buy Orders:** \`${analysis.buyCount}\` trades 📥`,
+            `**Sell Orders:** \`${analysis.sellCount}\` trades 📤`
           ].join('\n'),
           inline: true
         },
         {
-          name: '💼 Position Details',
+          name: '💼 __Position Details__',
           value: [
-            `Total Bought: ${analysis.totalBought.toLocaleString()} tokens`,
-            `Avg Buy Price: ${formatUSD(analysis.averageBuyPrice)}`,
-            `Total Sold: ${analysis.totalSold.toLocaleString()} tokens`,
-            `Avg Sell Price: ${formatUSD(analysis.averageSellPrice)}`,
-            `Current Holdings: ${analysis.currentHoldings.toLocaleString()} tokens`
+            `**Total Bought:** \`${analysis.totalBought.toLocaleString()}\` tokens 🔄`,
+            `**Avg Buy Price:** ${formatUSD(analysis.averageBuyPrice)} 💸`,
+            `**Total Sold:** \`${analysis.totalSold.toLocaleString()}\` tokens 🔄`,
+            `**Avg Sell Price:** ${formatUSD(analysis.averageSellPrice)} 💰`,
+            `**Current Holdings:** \`${analysis.currentHoldings.toLocaleString()}\` tokens 💎`
           ].join('\n'),
           inline: false
         },
         {
-          name: '📈 Profit/Loss Analysis',
+          name: '📈 __Profit/Loss Analysis__',
           value: [
-            `Realized P&L: ${formatUSD(analysis.realizedPnL)}`,
-            `Unrealized P&L: ${formatUSD(analysis.unrealizedPnL)}`,
-            `Total P&L: ${formatUSD(analysis.realizedPnL + analysis.unrealizedPnL)}`,
-            `ROI: ${formatPercentage(totalPnLPercent)}`
+            `**Realized P&L:** ${formatUSD(analysis.realizedPnL)} 💫`,
+            `**Unrealized P&L:** ${formatUSD(analysis.unrealizedPnL)} 📊`,
+            `**Total P&L:** ${formatUSD(analysis.realizedPnL + analysis.unrealizedPnL)} 🎯`,
+            `**ROI:** ${formatPercentage(totalPnLPercent)} ✨`
           ].join('\n'),
           inline: false
         }
       )
       .setTimestamp()
       .setFooter({ 
-        text: `Wallet: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` 
+        text: `Wallet: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)} | Powered by DexScreener` 
       });
 
     await interaction.editReply({ embeds: [embed] });
@@ -152,9 +152,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     if (error instanceof Error) {
       console.error('Detailed error:', error.message);
       console.error('Stack trace:', error.stack);
-      errorMessage += 'Technical details have been logged for investigation.';
+      errorMessage += '*Technical details have been logged for investigation.*';
     } else {
-      errorMessage += 'Please verify both addresses and try again.';
+      errorMessage += '*Please verify both addresses and try again.*';
     }
 
     await interaction.editReply(errorMessage);

@@ -18,28 +18,29 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     const embed = new EmbedBuilder()
       .setColor(0x5865F2) // Discord blurple color
-      .setTitle('🎯 Live Market Prices')
+      .setTitle('🎯 __Live Market Prices__')
+      .setDescription('**Real-time cryptocurrency price tracking** 📊')
       .addFields(
         {
-          name: '⟠ Ethereum (ETH)',
+          name: '⟠ __Ethereum (ETH)__',
           value: [
-            `Price: ${formatPrice(prices.ethereum.price)}`,
-            `24h Change: ${formatPriceChange(prices.ethereum.change24h)}`
+            `**Price:** ${formatPrice(prices.ethereum.price)} 💎`,
+            `**24h:** ${formatPriceChange(prices.ethereum.change24h)} 📊`
           ].join('\n'),
           inline: true
         },
         {
-          name: '◎ Solana (SOL)',
+          name: '◎ __Solana (SOL)__',
           value: [
-            `Price: ${formatPrice(prices.solana.price)}`,
-            `24h Change: ${formatPriceChange(prices.solana.change24h)}`
+            `**Price:** ${formatPrice(prices.solana.price)} 💫`,
+            `**24h:** ${formatPriceChange(prices.solana.change24h)} 📈`
           ].join('\n'),
           inline: true
         }
       )
       .setTimestamp()
       .setFooter({ 
-        text: `Last Updated: ${prices.ethereum.lastUpdated.toLocaleTimeString()}` 
+        text: `Last Updated: ${prices.ethereum.lastUpdated.toLocaleTimeString()} | Powered by CoinGecko 🦎` 
       });
 
     await interaction.editReply({ embeds: [embed] });
