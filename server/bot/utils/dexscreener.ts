@@ -34,10 +34,10 @@ const majorDexes: Record<Chain, string[]> = {
   'solana': ['raydium', 'orca', 'meteora']
 };
 
-// Chain identifier mapping
+// Chain identifier mapping for validation
 const chainIdentifiers: Record<Chain, string[]> = {
   'ethereum': ['ethereum', 'eth'],
-  'base': ['base', 'base-mainnet', 'base-main'],
+  'base': ['base', 'base-mainnet', 'base-main', 'basemainnet', '8453'], // Added Base chain ID
   'avalanche': ['avalanche', 'avax'],
   'solana': ['solana', 'sol']
 };
@@ -53,7 +53,6 @@ function adjustPrice(price: number, symbol: string): number {
           return adjusted;
         }
       }
-      // If no scaling works, assume it's already correct
       return price;
     }
     return price;
@@ -74,10 +73,38 @@ function isValidPrice(symbol: string, rawPrice: number): boolean {
 }
 
 function filterValidPairs(pairs: DexScreenerPair[], chain: Chain): DexScreenerPair[] {
-  console.log(`Filtering pairs for ${chain}. Found ${pairs.length} total pairs`);
+  console.log(`\nFiltering ${pairs.length} pairs for ${chain}:`);
 
+  // For Base chain debugging
+  if (chain === 'base') {
+    pairs.forEach(p => console.log(`Chain ID: ${p.chainId}, DEX: ${p.dexId}, Price: ${p.priceUsd}, Liquidity: $${p.liquidity?.usd?.toLocaleString()}`));
+  }
+
+  // First try with standard validation
   const validPairs = pairs.filter(pair => {
-    // Check if pair is on the correct chain using identifiers
+    // Special handling for Base chain
+    if (chain === 'base') {
+      // Accept pairs if they have Base in name or chain ID matches
+      const isBasePair = pair.chainId.toLowerCase().includes('base') || 
+                        pair.chainId === '8453' ||
+                        pair.dexId.toLowerCase().includes('base');
+
+      if (!isBasePair) {
+        console.log(`Skipping non-Base pair: ${pair.dexId} on ${pair.chainId}`);
+        return false;
+      }
+
+      // Very relaxed liquidity check for Base
+      if (!pair.liquidity?.usd || pair.liquidity.usd < 100) {
+        console.log(`Insufficient Base liquidity: $${pair.liquidity?.usd || 0}`);
+        return false;
+      }
+
+      console.log(`Valid Base pair found: ${pair.dexId}, Price: $${pair.priceUsd}, Liquidity: $${pair.liquidity.usd}`);
+      return true;
+    }
+
+    // Standard validation for other chains
     const chainId = pair.chainId.toLowerCase();
     const validIdentifiers = chainIdentifiers[chain];
     if (!validIdentifiers?.some(id => chainId.includes(id))) {
@@ -85,7 +112,7 @@ function filterValidPairs(pairs: DexScreenerPair[], chain: Chain): DexScreenerPa
       return false;
     }
 
-    // Validate price if we have a range for this token
+    // Rest of the validation logic remains unchanged
     const rawPrice = parseFloat(pair.priceUsd);
     const adjustedPrice = adjustPrice(rawPrice, pair.baseToken.symbol);
 
@@ -94,7 +121,6 @@ function filterValidPairs(pairs: DexScreenerPair[], chain: Chain): DexScreenerPa
       return false;
     }
 
-    // Adjust minimum liquidity threshold for stablecoins
     const baseMinLiquidity = MIN_LIQUIDITY[chain] || 5000;
     const minLiquidity = STABLECOINS.has(pair.baseToken.symbol) ? baseMinLiquidity / 2 : baseMinLiquidity;
 
@@ -103,10 +129,8 @@ function filterValidPairs(pairs: DexScreenerPair[], chain: Chain): DexScreenerPa
       return false;
     }
 
-    // Log key pair information
     console.log(`Valid ${chain} pair: ${pair.dexId}, Price: $${adjustedPrice}, Liquidity: $${pair.liquidity.usd.toLocaleString()}`);
 
-    // Update the price to the adjusted value
     if (STABLECOINS.has(pair.baseToken.symbol)) {
       pair.priceUsd = adjustedPrice.toString();
     }
@@ -115,8 +139,24 @@ function filterValidPairs(pairs: DexScreenerPair[], chain: Chain): DexScreenerPa
   });
 
   if (validPairs.length === 0) {
-    console.log(`No valid pairs found, using fallback...`);
-    // Fallback: Use the pair with highest liquidity
+    console.log(`No valid pairs found after filtering`);
+
+    // For Base chain, try with minimal validation
+    if (chain === 'base') {
+      const basePairs = pairs.filter(p => 
+        p.chainId.toLowerCase().includes('base') || 
+        p.chainId === '8453' ||
+        p.dexId.toLowerCase().includes('base')
+      );
+
+      if (basePairs.length > 0) {
+        const bestPair = basePairs.sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
+        console.log(`Using fallback Base pair: ${bestPair.dexId} with $${bestPair.liquidity?.usd?.toLocaleString()} liquidity`);
+        return [bestPair];
+      }
+    }
+
+    // For other chains, use standard fallback
     const sortedByLiquidity = [...pairs]
       .filter(p => chainIdentifiers[chain].some(id => p.chainId.toLowerCase().includes(id)))
       .sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0));
@@ -143,7 +183,7 @@ interface DexScreenerPair {
   };
   liquidity?: {
     usd?: number;
-    h24?: number;
+    change24h?: number;
   };
   volume?: {
     h24?: number;
@@ -228,7 +268,7 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
       priceChange1h: pair.priceChange?.h1 || 0,
       liquidity: {
         usd: pair.liquidity?.usd,
-        change24h: pair.liquidity?.h24
+        change24h: pair.liquidity?.change24h
       },
       volume: {
         h24: pair.volume?.h24,
