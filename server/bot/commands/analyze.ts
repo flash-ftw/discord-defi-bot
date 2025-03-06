@@ -22,7 +22,42 @@ function formatUSD(value: number): string {
 }
 
 function formatTransactions(buys: number, sells: number): string {
-  return `${buys} buys 📥 | ${sells} sells 📤`;
+  const ratio = buys / (sells || 1);
+  const signal = ratio > 1.5 ? '🟢' : ratio < 0.67 ? '🔴' : '🟡';
+  return `${buys} buys 📥 | ${sells} sells 📤 ${signal}`;
+}
+
+function analyzeMarketSentiment(analysis: any): string {
+  const signals = [];
+
+  // Price momentum
+  if (analysis.priceChange1h > 0 && analysis.priceChange24h > 0) {
+    signals.push('🟢 Bullish momentum');
+  } else if (analysis.priceChange1h < 0 && analysis.priceChange24h < 0) {
+    signals.push('🔴 Bearish pressure');
+  }
+
+  // Volume analysis
+  if (analysis.volume?.h24 > 0) {
+    const hourlyVolume = (analysis.volume.h24 / 24);
+    if (analysis.volume?.h1 > hourlyVolume * 1.5) {
+      signals.push('📊 Above average volume');
+    }
+  }
+
+  // Buy/Sell ratio analysis
+  if (analysis.transactions) {
+    const ratio = analysis.transactions.buys24h / (analysis.transactions.sells24h || 1);
+    if (ratio > 1.5) signals.push('💫 Strong buying pressure');
+    else if (ratio < 0.67) signals.push('⚠️ Heavy selling');
+  }
+
+  // Price differential analysis
+  if (analysis.priceDifferential && analysis.priceDifferential.spreadPercent > 1) {
+    signals.push(`💹 ${analysis.priceDifferential.spreadPercent.toFixed(2)}% price difference between ${analysis.priceDifferential.maxDex} and ${analysis.priceDifferential.minDex}`);
+  }
+
+  return signals.length > 0 ? signals.join('\n') : '📊 Neutral market activity';
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -71,6 +106,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       `\n**Historical Prices**`,
       `All-Time High: ${formatUSD(analysis.priceMax)}`,
       `All-Time Low: ${formatUSD(analysis.priceMin)}`,
+      `\n**Market Sentiment**`,
+      analyzeMarketSentiment(analysis)
     ].filter(Boolean).join('\n');
 
     await interaction.editReply({

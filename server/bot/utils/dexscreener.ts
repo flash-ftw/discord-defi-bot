@@ -67,6 +67,13 @@ interface TokenAnalysis {
   };
   fdv?: number;
   marketCap?: number;
+  priceDifferential?: {
+    maxPrice: number;
+    minPrice: number;
+    maxDex: string;
+    minDex: string;
+    spreadPercent: number;
+  };
 }
 
 export async function getTokenAnalysis(tokenContract: string, chain: Chain): Promise<TokenAnalysis | null> {
@@ -98,6 +105,25 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
     const pair = sortedPairs[0];
     console.log(`Selected pair on chain ${pair.chainId} from DEX ${pair.dexId}`);
 
+    // Calculate price differentials across DEXes
+    const validPairs = sortedPairs.filter(p => p.liquidity?.usd && p.liquidity.usd > 10000); // Only consider pairs with >$10k liquidity
+    let priceDifferential;
+    if (validPairs.length > 1) {
+      const prices = validPairs.map(p => ({
+        price: parseFloat(p.priceUsd),
+        dex: p.dexId
+      }));
+      const maxPrice = Math.max(...prices.map(p => p.price));
+      const minPrice = Math.min(...prices.map(p => p.price));
+      const maxDex = prices.find(p => p.price === maxPrice)?.dex || '';
+      const minDex = prices.find(p => p.price === minPrice)?.dex || '';
+      const spreadPercent = ((maxPrice - minPrice) / minPrice) * 100;
+
+      console.log(`Price differentials: Max ${maxPrice} (${maxDex}), Min ${minPrice} (${minDex}), Spread ${spreadPercent.toFixed(2)}%`);
+      priceDifferential = { maxPrice, minPrice, maxDex, minDex, spreadPercent };
+    }
+
+
     const analysis: TokenAnalysis = {
       chainId: pair.chainId,
       symbol: pair.baseToken.symbol,
@@ -121,7 +147,8 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
         sells24h: pair.txns.h24.sells
       } : undefined,
       fdv: pair.fdv,
-      marketCap: pair.marketCap
+      marketCap: pair.marketCap,
+      priceDifferential: priceDifferential
     };
 
     // Cache the analysis
