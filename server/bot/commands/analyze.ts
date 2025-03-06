@@ -96,14 +96,14 @@ function validateTokenAddress(address: string): boolean {
   return evmPattern.test(address) || solanaPattern.test(address);
 }
 
-function createTokenEmbed(analysis: any, tokenContract: string, chain: string): EmbedBuilder {
+export function createTokenEmbed(analysis: any, tokenContract: string, chain: string): EmbedBuilder {
   const sentiment = analyzeMarketSentiment(analysis);
   const chainEmoji = getChainEmoji(chain);
   const embedColor = getEmbedColor(analysis.priceChange24h);
 
   const securityStatus = {
-    liquidityLocked: analysis.liquidityLocked || false, 
-    mintable: analysis.mintable || false 
+    liquidityLocked: analysis.securityStatus?.liquidityLocked || false, 
+    mintable: analysis.securityStatus?.mintable || false 
   };
 
   const socialLinks = {
@@ -117,6 +117,7 @@ function createTokenEmbed(analysis: any, tokenContract: string, chain: string): 
     .setColor(embedColor)
     .setTitle(`${chainEmoji} ${analysis.name} (${analysis.symbol})`)
     .setDescription(`**Token Analysis on ${chain.charAt(0).toUpperCase() + chain.slice(1)}** 🔍\n\nContract: \`${tokenContract}\``)
+    .setThumbnail(analysis.logo)
     .addFields(
       { 
         name: '💰 __Price Information__',
