@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { detectChain, analyzePnL } from "../utils/blockchain";
 import { getTokenAnalysis } from "../utils/dexscreener";
 
@@ -27,13 +27,30 @@ function formatUSD(value: number): string {
 
 function formatPercentage(value: number): string {
   const sign = value >= 0 ? '📈' : '📉';
-  return `${sign} ${value.toFixed(2)}%`;
+  const color = value >= 0 ? '🟢' : '🔴';
+  return `${sign} ${color} ${Math.abs(value).toFixed(2)}%`;
+}
+
+function getChainEmoji(chain: string): string {
+  switch(chain.toLowerCase()) {
+    case 'ethereum': return '⟠';
+    case 'base': return '🔵';
+    case 'avalanche': return '🔺';
+    case 'solana': return '◎';
+    default: return '🔗';
+  }
+}
+
+function getEmbedColor(pnlPercent: number): number {
+  if (pnlPercent > 20) return 0x00ff00; // Strong green
+  if (pnlPercent > 0) return 0x90EE90; // Light green
+  if (pnlPercent < -20) return 0xff0000; // Strong red
+  if (pnlPercent < 0) return 0xFFCCCB; // Light red
+  return 0xFFFFFF; // White for neutral
 }
 
 function validateAddresses(walletAddress: string, tokenContract: string): boolean {
-  // Basic validation for EVM addresses
   const evmPattern = /^0x[a-fA-F0-9]{40}$/;
-  // Basic validation for Solana addresses
   const solanaPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
   const isValidWallet = evmPattern.test(walletAddress) || solanaPattern.test(walletAddress);
@@ -49,13 +66,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const walletAddress = interaction.options.getString('wallet', true);
     const tokenContract = interaction.options.getString('token', true);
 
-    // Validate address formats
     if (!validateAddresses(walletAddress, tokenContract)) {
       await interaction.editReply('❌ Invalid wallet or token address format. Please verify both addresses.');
       return;
     }
 
-    // Detect which chain the token is on
     const chain = await detectChain(tokenContract);
     if (!chain) {
       await interaction.editReply('❌ Token not found on any supported chain. Please verify the contract address is correct and the token exists on a supported chain (Ethereum, Base, Avalanche, or Solana).');
@@ -64,48 +79,71 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     console.log(`Analyzing wallet ${walletAddress} for token ${tokenContract} on ${chain}`);
 
-    // Get token details first
     const tokenInfo = await getTokenAnalysis(tokenContract, chain);
     if (!tokenInfo) {
       await interaction.editReply('❌ Could not fetch token information. The token might not exist or have enough liquidity.');
       return;
     }
 
-    console.log(`Token information:`, {
-      symbol: tokenInfo.symbol,
-      name: tokenInfo.name,
-      currentPrice: tokenInfo.priceUsd
-    });
-
-    // Get P&L analysis
     const analysis = await analyzePnL(walletAddress, tokenContract, chain);
     if (!analysis) {
       await interaction.editReply('❌ No transaction data found for this wallet and token. The wallet might not have any history with this token, or the token might be too new.');
       return;
     }
 
-    // Calculate percentages
     const totalInvestment = analysis.totalBought * analysis.averageBuyPrice;
     const totalPnLPercent = totalInvestment > 0 ? 
       ((analysis.realizedPnL + analysis.unrealizedPnL) / totalInvestment) * 100 : 0;
 
-    const response = [
-      `**${tokenInfo.name} (${tokenInfo.symbol}) Wallet Analysis on ${chain}**`,
-      `\n**Current Token Price**: ${formatUSD(tokenInfo.priceUsd)}`,
-      `\n**Transaction Summary**`,
-      `🔄 Total Buy Transactions: ${analysis.buyCount} trades`,
-      `🔄 Total Sell Transactions: ${analysis.sellCount} trades`,
-      `\n**Position Details**`,
-      `💰 Total Bought: ${analysis.totalBought.toLocaleString()} tokens at avg. ${formatUSD(analysis.averageBuyPrice)}`,
-      `💰 Total Sold: ${analysis.totalSold.toLocaleString()} tokens at avg. ${formatUSD(analysis.averageSellPrice)}`,
-      `💼 Current Holdings: ${analysis.currentHoldings.toLocaleString()} tokens`,
-      `\n**Profit/Loss Analysis**`,
-      `📊 Realized P&L: ${formatUSD(analysis.realizedPnL)}`,
-      `📈 Unrealized P&L: ${formatUSD(analysis.unrealizedPnL)}`,
-      `💫 Total P&L: ${formatUSD(analysis.realizedPnL + analysis.unrealizedPnL)} (${formatPercentage(totalPnLPercent)})`
-    ].join('\n');
+    const chainEmoji = getChainEmoji(chain);
+    const embedColor = getEmbedColor(totalPnLPercent);
 
-    await interaction.editReply({ content: response });
+    const embed = new EmbedBuilder()
+      .setColor(embedColor)
+      .setTitle(`${chainEmoji} ${tokenInfo.name} (${tokenInfo.symbol}) Wallet Analysis`)
+      .setDescription(`Chain: ${chain.charAt(0).toUpperCase() + chain.slice(1)}`)
+      .addFields(
+        {
+          name: '💰 Token Information',
+          value: `Current Price: ${formatUSD(tokenInfo.priceUsd)}`,
+          inline: false
+        },
+        {
+          name: '📊 Transaction Summary',
+          value: [
+            `Buy Transactions: ${analysis.buyCount} trades 📥`,
+            `Sell Transactions: ${analysis.sellCount} trades 📤`
+          ].join('\n'),
+          inline: true
+        },
+        {
+          name: '💼 Position Details',
+          value: [
+            `Total Bought: ${analysis.totalBought.toLocaleString()} tokens`,
+            `Avg Buy Price: ${formatUSD(analysis.averageBuyPrice)}`,
+            `Total Sold: ${analysis.totalSold.toLocaleString()} tokens`,
+            `Avg Sell Price: ${formatUSD(analysis.averageSellPrice)}`,
+            `Current Holdings: ${analysis.currentHoldings.toLocaleString()} tokens`
+          ].join('\n'),
+          inline: false
+        },
+        {
+          name: '📈 Profit/Loss Analysis',
+          value: [
+            `Realized P&L: ${formatUSD(analysis.realizedPnL)}`,
+            `Unrealized P&L: ${formatUSD(analysis.unrealizedPnL)}`,
+            `Total P&L: ${formatUSD(analysis.realizedPnL + analysis.unrealizedPnL)}`,
+            `ROI: ${formatPercentage(totalPnLPercent)}`
+          ].join('\n'),
+          inline: false
+        }
+      )
+      .setTimestamp()
+      .setFooter({ 
+        text: `Wallet: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` 
+      });
+
+    await interaction.editReply({ embeds: [embed] });
 
   } catch (error) {
     console.error('Error in wallet analyze command:', error);

@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { detectChain } from "../utils/blockchain";
 import { getTokenAnalysis } from "../utils/dexscreener";
 
@@ -14,7 +14,8 @@ export const data = new SlashCommandBuilder()
 
 function formatPercentage(value: number): string {
   const sign = value >= 0 ? '📈' : '📉';
-  return `${sign} ${value.toFixed(2)}%`;
+  const color = value >= 0 ? '🟢' : '🔴';
+  return `${sign} ${color} ${Math.abs(value).toFixed(2)}%`;
 }
 
 function formatUSD(value: number | undefined): string {
@@ -30,27 +31,36 @@ function formatUSD(value: number | undefined): string {
 function formatTransactions(buys: number, sells: number): string {
   const ratio = buys / (sells || 1);
   const signal = ratio > 1.5 ? '🟢' : ratio < 0.67 ? '🔴' : '🟡';
-  return `${buys.toLocaleString()} buys 📥 | ${sells.toLocaleString()} sells 📤 ${signal}`;
+  return `${buys.toLocaleString()} buys 📥 vs ${sells.toLocaleString()} sells 📤 ${signal}`;
 }
 
-function validateTokenAddress(address: string): boolean {
-  // Basic validation for EVM chains (0x followed by 40 hex chars)
-  const evmPattern = /^0x[a-fA-F0-9]{40}$/;
-  // Basic validation for Solana (base58 string between 32-44 chars)
-  const solanaPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-
-  return evmPattern.test(address) || solanaPattern.test(address);
+function getChainEmoji(chain: string): string {
+  switch(chain.toLowerCase()) {
+    case 'ethereum': return '⟠';
+    case 'base': return '🔵';
+    case 'avalanche': return '🔺';
+    case 'solana': return '◎';
+    default: return '🔗';
+  }
 }
 
-function analyzeMarketSentiment(analysis: any): string {
+function getEmbedColor(priceChange24h: number): number {
+  if (priceChange24h > 5) return 0x00ff00; // Strong green
+  if (priceChange24h > 0) return 0x90EE90; // Light green
+  if (priceChange24h < -5) return 0xff0000; // Strong red
+  if (priceChange24h < 0) return 0xFFCCCB; // Light red
+  return 0xFFFFFF; // White for neutral
+}
+
+function analyzeMarketSentiment(analysis: any): string[] {
   const signals = [];
 
   try {
     // Price momentum
     if (analysis.priceChange1h > 0 && analysis.priceChange24h > 0) {
-      signals.push('🟢 Bullish momentum');
+      signals.push('🚀 Strong bullish momentum');
     } else if (analysis.priceChange1h < 0 && analysis.priceChange24h < 0) {
-      signals.push('🔴 Bearish pressure');
+      signals.push('🐻 Bearish pressure');
     }
 
     // Volume analysis
@@ -63,22 +73,30 @@ function analyzeMarketSentiment(analysis: any): string {
 
     // Buy/Sell ratio analysis
     if (analysis.transactions) {
-      console.log('Analyzing transactions for sentiment:', analysis.transactions);
       const ratio = analysis.transactions.buys24h / (analysis.transactions.sells24h || 1);
       if (ratio > 1.5) signals.push('💫 Strong buying pressure');
-      else if (ratio < 0.67) signals.push('⚠️ Heavy selling');
+      else if (ratio < 0.67) signals.push('⚠️ Heavy selling detected');
     }
 
     // Price differential analysis
     if (analysis.priceDifferential && analysis.priceDifferential.spreadPercent > 1) {
-      signals.push(`💹 ${analysis.priceDifferential.spreadPercent.toFixed(2)}% price difference between ${analysis.priceDifferential.maxDex} and ${analysis.priceDifferential.minDex}`);
+      signals.push(`💹 ${analysis.priceDifferential.spreadPercent.toFixed(2)}% arbitrage opportunity between ${analysis.priceDifferential.maxDex} and ${analysis.priceDifferential.minDex}`);
     }
 
-    return signals.length > 0 ? signals.join('\n') : '📊 Neutral market activity';
+    return signals.length > 0 ? signals : ['📊 Neutral market activity'];
   } catch (error) {
     console.error('Error in market sentiment analysis:', error);
-    return '📊 Unable to analyze market sentiment';
+    return ['📊 Unable to analyze market sentiment'];
   }
+}
+
+function validateTokenAddress(address: string): boolean {
+  // Basic validation for EVM chains (0x followed by 40 hex chars)
+  const evmPattern = /^0x[a-fA-F0-9]{40}$/;
+  // Basic validation for Solana (base58 string between 32-44 chars)
+  const solanaPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
+  return evmPattern.test(address) || solanaPattern.test(address);
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -112,40 +130,61 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     console.log(`Token analysis received:`, analysis);
 
-    // Log transaction data specifically for debugging
-    if (analysis.transactions) {
-      console.log('Processing transactions:', {
-        buys: analysis.transactions.buys24h,
-        sells: analysis.transactions.sells24h,
-        symbol: analysis.symbol,
-        isStablecoin: analysis.symbol === 'USDT' || analysis.symbol === 'USDC'
+    const sentiment = analyzeMarketSentiment(analysis);
+    const chainEmoji = getChainEmoji(chain);
+    const embedColor = getEmbedColor(analysis.priceChange24h);
+
+    const embed = new EmbedBuilder()
+      .setColor(embedColor)
+      .setTitle(`${chainEmoji} ${analysis.name} (${analysis.symbol})`)
+      .setDescription(`Token Analysis on ${chain.charAt(0).toUpperCase() + chain.slice(1)}`)
+      .addFields(
+        { 
+          name: '💰 Price Information',
+          value: [
+            `Current Price: ${formatUSD(analysis.priceUsd)}`,
+            `24h Change: ${formatPercentage(analysis.priceChange24h)}`,
+            `1h Change: ${formatPercentage(analysis.priceChange1h)}`
+          ].join('\n'),
+          inline: false
+        },
+        {
+          name: '📊 Market Metrics',
+          value: [
+            `Market Cap: ${formatUSD(analysis.marketCap)}`,
+            analysis.fdv ? `FDV: ${formatUSD(analysis.fdv)}` : null,
+            `Volume (24h): ${formatUSD(analysis.volume?.h24)}`
+          ].filter(Boolean).join('\n'),
+          inline: true
+        },
+        {
+          name: '💧 Liquidity Info',
+          value: [
+            `Current: ${formatUSD(analysis.liquidity?.usd)}`,
+            analysis.liquidity?.change24h !== undefined ?
+              `24h Change: ${formatPercentage(analysis.liquidity.change24h)}` : null
+          ].filter(Boolean).join('\n'),
+          inline: true
+        },
+        {
+          name: '📈 Trading Activity',
+          value: analysis.transactions ?
+            formatTransactions(analysis.transactions.buys24h, analysis.transactions.sells24h) :
+            'No transaction data available',
+          inline: false
+        },
+        {
+          name: '🎯 Market Sentiment',
+          value: sentiment.join('\n'),
+          inline: false
+        }
+      )
+      .setTimestamp()
+      .setFooter({ 
+        text: `Contract: ${tokenContract.slice(0, 6)}...${tokenContract.slice(-4)}` 
       });
-    }
 
-    // Format response with detailed analysis
-    const response = [
-      `**${analysis.name} (${analysis.symbol}) Analysis**`,
-      `Chain: ${chain}`,
-      `\n**Price Information**`,
-      `Current Price: ${formatUSD(analysis.priceUsd)}`,
-      `24h Change: ${formatPercentage(analysis.priceChange24h)}`,
-      `1h Change: ${formatPercentage(analysis.priceChange1h)}`,
-      `\n**Market Metrics**`,
-      analysis.marketCap ? `Market Cap: ${formatUSD(analysis.marketCap)}` : null,
-      analysis.fdv ? `Fully Diluted Value: ${formatUSD(analysis.fdv)}` : null,
-      `\n**Trading Activity (24h)**`,
-      `Volume: ${formatUSD(analysis.volume?.h24)}`,
-      analysis.transactions ? 
-        `Transactions: ${formatTransactions(analysis.transactions.buys24h, analysis.transactions.sells24h)}` : null,
-      `\n**Liquidity Info**`,
-      `Current Liquidity: ${formatUSD(analysis.liquidity?.usd)}`,
-      analysis.liquidity?.change24h !== undefined ? 
-        `Liquidity Change (24h): ${formatPercentage(analysis.liquidity.change24h)}` : null,
-      `\n**Market Sentiment**`,
-      analyzeMarketSentiment(analysis)
-    ].filter(Boolean).join('\n');
-
-    await interaction.editReply({ content: response });
+    await interaction.editReply({ embeds: [embed] });
 
   } catch (error) {
     console.error('Error in analyze command:', error);
