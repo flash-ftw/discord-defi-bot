@@ -1,3 +1,17 @@
+// Example usage of the /wallet command:
+/**
+ * To analyze a wallet's P&L for a token:
+ * /wallet wallet:0x1234... token:0xabcd...
+ * 
+ * This will show:
+ * - Total buy/sell transactions
+ * - Average buy/sell prices
+ * - Current holdings
+ * - Realized P&L (from completed trades)
+ * - Unrealized P&L (from current holdings)
+ * - Total P&L percentage
+ */
+
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { detectChain, analyzePnL } from "../utils/blockchain";
 

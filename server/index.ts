@@ -20,6 +20,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Add basic root route
+app.get('/', (req, res) => {
+  res.json({
+    status: 'online',
+    message: 'Discord Crypto Analytics Bot Server',
+    timestamp: new Date().toISOString()
+  });
+});
+
 (async () => {
   const server = await registerRoutes(app);
 

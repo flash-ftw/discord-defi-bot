@@ -4,6 +4,7 @@ import * as analyzeWalletCommand from "./analyze-wallet";
 import * as helpCommand from "./help";
 
 const commands = [analyzeCommand, analyzeWalletCommand, helpCommand];
+const GUILD_ID = '995147630009139252';
 
 export async function setupCommands(client: Client) {
   // Create a collection of all commands
@@ -38,10 +39,17 @@ export async function setupCommands(client: Client) {
     }
   });
 
-  // Register the commands globally
+  // Register the commands for the specific guild
   try {
-    await client.application?.commands.set(commands.map(cmd => cmd.data));
-    console.log('Successfully registered application commands.');
+    const guild = client.guilds.cache.get(GUILD_ID);
+    if (!guild) {
+      console.error(`Could not find guild with ID ${GUILD_ID}`);
+      return;
+    }
+
+    console.log(`Registering commands for guild: ${guild.name} (${GUILD_ID})`);
+    await guild.commands.set(commands.map(cmd => cmd.data));
+    console.log('Successfully registered application commands for the guild.');
   } catch (error) {
     console.error('Error registering application commands:', error);
   }
