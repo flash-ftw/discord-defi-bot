@@ -78,7 +78,7 @@ export async function getTransactionHistory(
 
     // Generate unique transaction patterns based on wallet address
     const walletSeed = parseInt(walletAddress.slice(-4), 16);
-    const patternType = walletSeed % 6; // Expanded to 6 different patterns
+    const patternType = walletSeed % 6; // 6 different patterns
 
     let mockTransactions: InsertTransaction[] = [];
 
@@ -89,13 +89,14 @@ export async function getTransactionHistory(
       // Special pattern for USDT with more realistic stable prices
       const pattern = STABLECOIN_PATTERNS['USDT'];
       const txSize = pattern.minTxSize + (walletSeed % (pattern.maxTxSize - pattern.minTxSize));
+      const priceVariation = 0.0001; // 0.01% price variation
 
       mockTransactions = [
         {
           walletAddress,
           tokenContract,
           amount: txSize.toString(),
-          priceUsd: "0.9999",
+          priceUsd: (1 - priceVariation).toString(),
           timestamp: new Date(timestamp.getTime() - 30 * 24 * 60 * 60 * 1000),
           chain,
           type: "buy"
@@ -104,186 +105,38 @@ export async function getTransactionHistory(
           walletAddress,
           tokenContract,
           amount: (txSize * 0.5).toString(),
-          priceUsd: "1.0001",
+          priceUsd: (1 + priceVariation).toString(),
           timestamp: new Date(timestamp.getTime() - 15 * 24 * 60 * 60 * 1000),
           chain,
           type: "sell"
         }
       ];
     } else {
+      const basePrice = currentPrice * 0.8; // Start from 20% lower
+      const priceGrowth = 1.1; // 10% growth between transactions
+
       switch(patternType) {
-        case 0: // Long term holder - early entry, small profit taking
-          mockTransactions = [
-            {
-              walletAddress,
-              tokenContract,
-              amount: "100000",
-              priceUsd: (currentPrice * 0.4).toString(),
-              timestamp: new Date(timestamp.getTime() - 90 * 24 * 60 * 60 * 1000),
-              chain,
-              type: "buy"
-            },
-            {
-              walletAddress,
-              tokenContract,
-              amount: "20000",
-              priceUsd: (currentPrice * 1.2).toString(),
-              timestamp: new Date(timestamp.getTime() - 30 * 24 * 60 * 60 * 1000),
-              chain,
-              type: "sell"
-            }
-          ];
+        case 0: // Long term holder
+          mockTransactions = generateHodlPattern(walletAddress, tokenContract, chain, basePrice, timestamp);
           break;
-        case 1: // Active trader - multiple entries and exits
-          mockTransactions = [
-            {
-              walletAddress,
-              tokenContract,
-              amount: "50000",
-              priceUsd: (currentPrice * 0.8).toString(),
-              timestamp: new Date(timestamp.getTime() - 14 * 24 * 60 * 60 * 1000),
-              chain,
-              type: "buy"
-            },
-            {
-              walletAddress,
-              tokenContract,
-              amount: "30000",
-              priceUsd: (currentPrice * 0.9).toString(),
-              timestamp: new Date(timestamp.getTime() - 10 * 24 * 60 * 60 * 1000),
-              chain,
-              type: "buy"
-            },
-            {
-              walletAddress,
-              tokenContract,
-              amount: "45000",
-              priceUsd: (currentPrice * 1.15).toString(),
-              timestamp: new Date(timestamp.getTime() - 5 * 24 * 60 * 60 * 1000),
-              chain,
-              type: "sell"
-            },
-            {
-              walletAddress,
-              tokenContract,
-              amount: "25000",
-              priceUsd: (currentPrice * 1.1).toString(),
-              timestamp: new Date(timestamp.getTime() - 1 * 24 * 60 * 60 * 1000),
-              chain,
-              type: "sell"
-            }
-          ];
+        case 1: // Active trader
+          mockTransactions = generateTraderPattern(walletAddress, tokenContract, chain, basePrice, timestamp);
           break;
-        case 2: // Recent buyer - single entry
-          mockTransactions = [
-            {
-              walletAddress,
-              tokenContract,
-              amount: "75000",
-              priceUsd: (currentPrice * 0.95).toString(),
-              timestamp: new Date(timestamp.getTime() - 3 * 24 * 60 * 60 * 1000),
-              chain,
-              type: "buy"
-            }
-          ];
+        case 2: // Recent buyer
+          mockTransactions = generateNewInvestorPattern(walletAddress, tokenContract, chain, basePrice, timestamp);
           break;
-        case 3: // Swing trader - multiple cycles
-          mockTransactions = [
-            {
-              walletAddress,
-              tokenContract,
-              amount: "60000",
-              priceUsd: (currentPrice * 0.7).toString(),
-              timestamp: new Date(timestamp.getTime() - 21 * 24 * 60 * 60 * 1000),
-              chain,
-              type: "buy"
-            },
-            {
-              walletAddress,
-              tokenContract,
-              amount: "40000",
-              priceUsd: (currentPrice * 1.3).toString(),
-              timestamp: new Date(timestamp.getTime() - 14 * 24 * 60 * 60 * 1000),
-              chain,
-              type: "sell"
-            },
-            {
-              walletAddress,
-              tokenContract,
-              amount: "50000",
-              priceUsd: (currentPrice * 0.85).toString(),
-              timestamp: new Date(timestamp.getTime() - 7 * 24 * 60 * 60 * 1000),
-              chain,
-              type: "buy"
-            },
-            {
-              walletAddress,
-              tokenContract,
-              amount: "30000",
-              priceUsd: (currentPrice * 1.2).toString(),
-              timestamp: new Date(timestamp.getTime() - 2 * 24 * 60 * 60 * 1000),
-              chain,
-              type: "sell"
-            }
-          ];
+        case 3: // Swing trader
+          mockTransactions = generateSwingPattern(walletAddress, tokenContract, chain, basePrice, timestamp);
           break;
-        case 4: // Complete exit - profitable
-          mockTransactions = [
-            {
-              walletAddress,
-              tokenContract,
-              amount: "80000",
-              priceUsd: (currentPrice * 0.6).toString(),
-              timestamp: new Date(timestamp.getTime() - 45 * 24 * 60 * 60 * 1000),
-              chain,
-              type: "buy"
-            },
-            {
-              walletAddress,
-              tokenContract,
-              amount: "80000",
-              priceUsd: (currentPrice * 1.4).toString(),
-              timestamp: new Date(timestamp.getTime() - 15 * 24 * 60 * 60 * 1000),
-              chain,
-              type: "sell"
-            }
-          ];
+        case 4: // Complete exit
+          mockTransactions = generateExitPattern(walletAddress, tokenContract, chain, basePrice, timestamp);
           break;
-        case 5: // Accumulator - multiple buys, no sells
-          mockTransactions = [
-            {
-              walletAddress,
-              tokenContract,
-              amount: "30000",
-              priceUsd: (currentPrice * 1.1).toString(),
-              timestamp: new Date(timestamp.getTime() - 30 * 24 * 60 * 60 * 1000),
-              chain,
-              type: "buy"
-            },
-            {
-              walletAddress,
-              tokenContract,
-              amount: "40000",
-              priceUsd: (currentPrice * 0.9).toString(),
-              timestamp: new Date(timestamp.getTime() - 15 * 24 * 60 * 60 * 1000),
-              chain,
-              type: "buy"
-            },
-            {
-              walletAddress,
-              tokenContract,
-              amount: "50000",
-              priceUsd: (currentPrice * 0.8).toString(),
-              timestamp: new Date(timestamp.getTime() - 5 * 24 * 60 * 60 * 1000),
-              chain,
-              type: "buy"
-            }
-          ];
+        case 5: // Accumulator
+          mockTransactions = generateAccumulatorPattern(walletAddress, tokenContract, chain, basePrice, timestamp);
           break;
       }
     }
 
-    // Log the generated transactions for debugging
     console.log('Generated transactions:', {
       count: mockTransactions.length,
       currentPrice,
@@ -294,12 +147,198 @@ export async function getTransactionHistory(
     return { transactions: mockTransactions, currentPrice };
   } catch (error) {
     console.error("Error fetching transactions:", error);
-    if (error instanceof Error) {
-      console.error("Error details:", error.message);
-      console.error("Stack trace:", error.stack);
-    }
     return { transactions: [], currentPrice: null };
   }
+}
+
+// Helper functions to generate different trading patterns
+function generateHodlPattern(
+  walletAddress: string,
+  tokenContract: string,
+  chain: Chain,
+  basePrice: number,
+  timestamp: Date
+): InsertTransaction[] {
+  return [
+    {
+      walletAddress,
+      tokenContract,
+      amount: "100000",
+      priceUsd: (basePrice * 0.8).toString(),
+      timestamp: new Date(timestamp.getTime() - 90 * 24 * 60 * 60 * 1000),
+      chain,
+      type: "buy"
+    },
+    {
+      walletAddress,
+      tokenContract,
+      amount: "20000",
+      priceUsd: (basePrice * 1.5).toString(),
+      timestamp: new Date(timestamp.getTime() - 30 * 24 * 60 * 60 * 1000),
+      chain,
+      type: "sell"
+    }
+  ];
+}
+
+function generateTraderPattern(
+  walletAddress: string,
+  tokenContract: string,
+  chain: Chain,
+  basePrice: number,
+  timestamp: Date
+): InsertTransaction[] {
+  const trades = [];
+  let currentPrice = basePrice;
+
+  for (let i = 0; i < 4; i++) {
+    const timeOffset = (4 - i) * 7 * 24 * 60 * 60 * 1000;
+    currentPrice *= 1.1; // 10% price increase each trade
+
+    trades.push({
+      walletAddress,
+      tokenContract,
+      amount: (25000 + (i * 5000)).toString(),
+      priceUsd: currentPrice.toString(),
+      timestamp: new Date(timestamp.getTime() - timeOffset),
+      chain,
+      type: i % 2 === 0 ? "buy" : "sell"
+    });
+  }
+
+  return trades;
+}
+
+function generateNewInvestorPattern(
+  walletAddress: string,
+  tokenContract: string,
+  chain: Chain,
+  basePrice: number,
+  timestamp: Date
+): InsertTransaction[] {
+  return [{
+    walletAddress,
+    tokenContract,
+    amount: "75000",
+    priceUsd: (basePrice * 0.95).toString(),
+    timestamp: new Date(timestamp.getTime() - 3 * 24 * 60 * 60 * 1000),
+    chain,
+    type: "buy"
+  }];
+}
+
+function generateSwingPattern(
+  walletAddress: string,
+  tokenContract: string,
+  chain: Chain,
+  basePrice: number,
+  timestamp: Date
+): InsertTransaction[] {
+  return [
+    {
+      walletAddress,
+      tokenContract,
+      amount: "60000",
+      priceUsd: (basePrice * 0.7).toString(),
+      timestamp: new Date(timestamp.getTime() - 21 * 24 * 60 * 60 * 1000),
+      chain,
+      type: "buy"
+    },
+    {
+      walletAddress,
+      tokenContract,
+      amount: "40000",
+      priceUsd: (basePrice * 1.3).toString(),
+      timestamp: new Date(timestamp.getTime() - 14 * 24 * 60 * 60 * 1000),
+      chain,
+      type: "sell"
+    },
+    {
+      walletAddress,
+      tokenContract,
+      amount: "50000",
+      priceUsd: (basePrice * 0.85).toString(),
+      timestamp: new Date(timestamp.getTime() - 7 * 24 * 60 * 60 * 1000),
+      chain,
+      type: "buy"
+    },
+    {
+      walletAddress,
+      tokenContract,
+      amount: "30000",
+      priceUsd: (basePrice * 1.2).toString(),
+      timestamp: new Date(timestamp.getTime() - 2 * 24 * 60 * 60 * 1000),
+      chain,
+      type: "sell"
+    }
+  ];
+}
+
+function generateExitPattern(
+  walletAddress: string,
+  tokenContract: string,
+  chain: Chain,
+  basePrice: number,
+  timestamp: Date
+): InsertTransaction[] {
+  return [
+    {
+      walletAddress,
+      tokenContract,
+      amount: "80000",
+      priceUsd: (basePrice * 0.6).toString(),
+      timestamp: new Date(timestamp.getTime() - 45 * 24 * 60 * 60 * 1000),
+      chain,
+      type: "buy"
+    },
+    {
+      walletAddress,
+      tokenContract,
+      amount: "80000",
+      priceUsd: (basePrice * 1.4).toString(),
+      timestamp: new Date(timestamp.getTime() - 15 * 24 * 60 * 60 * 1000),
+      chain,
+      type: "sell"
+    }
+  ];
+}
+
+function generateAccumulatorPattern(
+  walletAddress: string,
+  tokenContract: string,
+  chain: Chain,
+  basePrice: number,
+  timestamp: Date
+): InsertTransaction[] {
+  return [
+    {
+      walletAddress,
+      tokenContract,
+      amount: "30000",
+      priceUsd: (basePrice * 1.1).toString(),
+      timestamp: new Date(timestamp.getTime() - 30 * 24 * 60 * 60 * 1000),
+      chain,
+      type: "buy"
+    },
+    {
+      walletAddress,
+      tokenContract,
+      amount: "40000",
+      priceUsd: (basePrice * 0.9).toString(),
+      timestamp: new Date(timestamp.getTime() - 15 * 24 * 60 * 60 * 1000),
+      chain,
+      type: "buy"
+    },
+    {
+      walletAddress,
+      tokenContract,
+      amount: "50000",
+      priceUsd: (basePrice * 0.8).toString(),
+      timestamp: new Date(timestamp.getTime() - 5 * 24 * 60 * 60 * 1000),
+      chain,
+      type: "buy"
+    }
+  ];
 }
 
 interface PnLAnalysis {
@@ -340,9 +379,20 @@ export async function analyzePnL(
     let buyCount = 0;
     let sellCount = 0;
 
-    transactions.forEach(tx => {
+    // Sort transactions by timestamp for accurate P&L calculation
+    const sortedTransactions = transactions.sort((a, b) =>
+      a.timestamp.getTime() - b.timestamp.getTime()
+    );
+
+    // Calculate running average buy price for more accurate P&L
+    let runningAverageBuyPrice = 0;
+    let currentHoldingCost = 0;
+    let realizedPnL = 0;
+
+    for (const tx of sortedTransactions) {
       const amount = parseFloat(tx.amount);
       const price = parseFloat(tx.priceUsd);
+      const value = amount * price;
 
       console.log(`Processing transaction:`, {
         type: tx.type,
@@ -353,21 +403,26 @@ export async function analyzePnL(
 
       if (tx.type === "buy") {
         totalBought += amount;
-        totalBoughtValue += amount * price;
+        totalBoughtValue += value;
+        currentHoldingCost = ((currentHoldingCost * (totalBought - amount)) + value) / totalBought;
+        runningAverageBuyPrice = totalBoughtValue / totalBought;
         buyCount++;
       } else {
         totalSold += amount;
-        totalSoldValue += amount * price;
+        totalSoldValue += value;
+        // Calculate realized P&L based on average cost
+        realizedPnL += (price - currentHoldingCost) * amount;
         sellCount++;
       }
-    });
+    }
 
     const currentHoldings = totalBought - totalSold;
-    const averageBuyPrice = totalBoughtValue / (totalBought ||1); //Avoid division by zero
-    const averageSellPrice = totalSoldValue / (totalSold || 1); // Avoid division by zero
+    const averageBuyPrice = totalBoughtValue / (totalBought || 1);
+    const averageSellPrice = totalSoldValue / (totalSold || 1);
 
-    const realizedPnL = totalSoldValue - (totalSold * averageBuyPrice);
-    const unrealizedPnL = currentHoldings * (currentPrice - averageBuyPrice);
+    // Calculate unrealized P&L based on current holdings and average buy price
+    const unrealizedPnL = currentHoldings > 0 ?
+      currentHoldings * (currentPrice - averageBuyPrice) : 0;
 
     // Log the calculated metrics
     console.log('P&L Analysis Results:', {
