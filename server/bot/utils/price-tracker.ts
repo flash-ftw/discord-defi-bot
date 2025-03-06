@@ -86,14 +86,14 @@ export function startPriceTracking(client: Client) {
         `${(prices.solana.price / 1000).toFixed(1)}K` :
         prices.solana.price.toFixed(1);
 
-      const status = `ETH$${ethPrice}|SOL$${solPrice}`; // Compact format with $ and | separator
+      const status = `ETH $ ${ethPrice} | SOL $ ${solPrice}`; // Exactly matching requested format
       // ActivityType options:
       // 0 = Playing
       // 1 = Streaming
       // 2 = Listening to
       // 3 = Watching
       // 5 = Competing in
-      await client.user?.setActivity(status, { type: 0 }); // Changed to "Playing" type
+      await client.user?.setActivity(status, { type: 0 }); // Using "Playing" type
 
       console.log('Updated bot status with prices:', status);
     } catch (error) {
