@@ -20,5 +20,5 @@ export const insertTransactionSchema = createInsertSchema(transactions).omit({
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 export type Transaction = typeof transactions.$inferSelect;
 
-export const supportedChains = ['ethereum', 'base', 'avalanche'] as const;
+export const supportedChains = ['ethereum', 'base', 'avalanche', 'solana'] as const;
 export type Chain = typeof supportedChains[number];

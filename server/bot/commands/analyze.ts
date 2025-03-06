@@ -1,16 +1,29 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { detectChain } from "../utils/blockchain";
-import { getTokenData } from "../utils/dexscreener";
+import { getTokenAnalysis } from "../utils/dexscreener";
 
 export const data = new SlashCommandBuilder()
   .setName('analyze')
-  .setDescription('Analyze a token across supported chains')
+  .setDescription('Analyze a token\'s price, volume, and market metrics')
   .addStringOption(option =>
     option
       .setName('token')
       .setDescription('Token contract address')
       .setRequired(true)
   );
+
+function formatPercentage(value: number): string {
+  const sign = value >= 0 ? '📈' : '📉';
+  return `${sign} ${value.toFixed(2)}%`;
+}
+
+function formatUSD(value: number): string {
+  return `$${value.toLocaleString(undefined, { maximumFractionDigits: 6 })}`;
+}
+
+function formatTransactions(buys: number, sells: number): string {
+  return `${buys} buys 📥 | ${sells} sells 📤`;
+}
 
 export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply();
@@ -28,24 +41,44 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     console.log(`Detected chain: ${chain}`);
 
-    // Get token data from DexScreener
-    const tokenData = await getTokenData(tokenContract, chain);
-    if (!tokenData) {
-      await interaction.editReply('❌ Failed to fetch token data.');
+    // Get detailed token analysis
+    const analysis = await getTokenAnalysis(tokenContract, chain);
+    if (!analysis) {
+      await interaction.editReply('❌ Failed to fetch token analysis.');
       return;
     }
 
-    console.log(`Token data received:`, tokenData);
+    console.log(`Token analysis received:`, analysis);
+
+    // Format response with detailed P&L analysis
+    const response = [
+      `**${analysis.name} (${analysis.symbol}) Analysis**`,
+      `Chain: ${chain}`,
+      `\n**Price Information**`,
+      `Current Price: ${formatUSD(analysis.priceUsd)}`,
+      `24h Change: ${formatPercentage(analysis.priceChange24h)}`,
+      `1h Change: ${formatPercentage(analysis.priceChange1h)}`,
+      `\n**Market Metrics**`,
+      analysis.marketCap ? `Market Cap: ${formatUSD(analysis.marketCap)}` : null,
+      analysis.fdv ? `Fully Diluted Value: ${formatUSD(analysis.fdv)}` : null,
+      `\n**Trading Activity (24h)**`,
+      `Volume: ${formatUSD(analysis.volume.h24 || 0)}`,
+      analysis.transactions ? 
+        `Transactions: ${formatTransactions(analysis.transactions.buys24h, analysis.transactions.sells24h)}` : null,
+      `\n**Liquidity Info**`,
+      `Current Liquidity: ${formatUSD(analysis.liquidity.usd || 0)}`,
+      `Liquidity Change (24h): ${formatPercentage(analysis.liquidity.change24h || 0)}`,
+      `\n**Historical Prices**`,
+      `All-Time High: ${formatUSD(analysis.priceMax)}`,
+      `All-Time Low: ${formatUSD(analysis.priceMin)}`,
+    ].filter(Boolean).join('\n');
 
     await interaction.editReply({
-      content: `**Token Analysis**\n` +
-        `Chain: ${chain}\n` +
-        `Name: ${tokenData.name}\n` +
-        `Symbol: ${tokenData.symbol}\n` +
-        `Current Price: $${tokenData.priceUsd.toFixed(6)}`
+      content: response
     });
+
   } catch (error) {
     console.error('Error in analyze command:', error);
-    await interaction.editReply('❌ Error analyzing token. Please try again.');
+    await interaction.editReply('❌ An error occurred while analyzing the token.');
   }
 }
