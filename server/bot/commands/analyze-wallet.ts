@@ -29,6 +29,18 @@ function formatPercentage(value: number): string {
   return `${sign} ${value.toFixed(2)}%`;
 }
 
+function validateAddresses(walletAddress: string, tokenContract: string): boolean {
+  // Basic validation for EVM addresses
+  const evmPattern = /^0x[a-fA-F0-9]{40}$/;
+  // Basic validation for Solana addresses
+  const solanaPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
+  const isValidWallet = evmPattern.test(walletAddress) || solanaPattern.test(walletAddress);
+  const isValidToken = evmPattern.test(tokenContract) || solanaPattern.test(tokenContract);
+
+  return isValidWallet && isValidToken;
+}
+
 export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply();
 
@@ -36,10 +48,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const walletAddress = interaction.options.getString('wallet', true);
     const tokenContract = interaction.options.getString('token', true);
 
+    // Validate address formats
+    if (!validateAddresses(walletAddress, tokenContract)) {
+      await interaction.editReply('❌ Invalid wallet or token address format. Please verify both addresses.');
+      return;
+    }
+
     // Detect which chain the token is on
     const chain = await detectChain(tokenContract);
     if (!chain) {
-      await interaction.editReply('❌ Token not found on any supported chain.');
+      await interaction.editReply('❌ Token not found on any supported chain. Please verify the contract address is correct and the token exists on a supported chain (Ethereum, Base, Avalanche, or Solana).');
       return;
     }
 
@@ -48,13 +66,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     // Get P&L analysis
     const analysis = await analyzePnL(walletAddress, tokenContract, chain);
     if (!analysis) {
-      await interaction.editReply('❌ No transaction data found for this wallet and token.');
+      await interaction.editReply('❌ No transaction data found for this wallet and token. The wallet might not have any history with this token, or the token might be too new.');
       return;
     }
 
     // Calculate percentages
-    const totalPnLPercent = ((analysis.realizedPnL + analysis.unrealizedPnL) / 
-      (analysis.totalBought * analysis.averageBuyPrice)) * 100;
+    const totalInvestment = analysis.totalBought * analysis.averageBuyPrice;
+    const totalPnLPercent = totalInvestment > 0 ? 
+      ((analysis.realizedPnL + analysis.unrealizedPnL) / totalInvestment) * 100 : 0;
 
     const response = [
       `**Wallet Analysis for ${chain}**`,
@@ -76,6 +95,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   } catch (error) {
     console.error('Error in wallet analyze command:', error);
-    await interaction.editReply('❌ An error occurred while analyzing the wallet.');
+    let errorMessage = '❌ An error occurred while analyzing the wallet. ';
+
+    if (error instanceof Error) {
+      console.error('Detailed error:', error.message);
+      console.error('Stack trace:', error.stack);
+      errorMessage += 'Technical details have been logged for investigation.';
+    } else {
+      errorMessage += 'Please verify both addresses and try again.';
+    }
+
+    await interaction.editReply(errorMessage);
   }
 }

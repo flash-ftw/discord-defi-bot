@@ -5,7 +5,7 @@ import NodeCache from "node-cache";
 const DEXSCREENER_API = "https://api.dexscreener.com/latest";
 const cache = new NodeCache({ stdTTL: 300 }); // 5 minutes cache
 
-// Price validation ranges with more accurate thresholds
+// Update PRICE_RANGES to include more accurate USDT range
 const PRICE_RANGES = {
   'WETH': { min: 2000, max: 3000 },
   'cbETH': { min: 2000, max: 3000 },
@@ -17,6 +17,25 @@ const PRICE_RANGES = {
 
 // List of stablecoins that need decimal adjustment
 const STABLECOINS = new Set(['USDT', 'USDC', 'DAI']);
+
+// Update function to handle stablecoin price adjustment
+function adjustPrice(price: number, symbol: string): number {
+  if (STABLECOINS.has(symbol)) {
+    if (price < 0.1) {
+      // Try different scaling factors to get to ~$1
+      const scalingFactors = [24000, 1000000, 100000000];
+      for (const factor of scalingFactors) {
+        const adjusted = price * factor;
+        if (adjusted >= 0.98 && adjusted <= 1.02) {
+          return adjusted;
+        }
+      }
+      return price;
+    }
+    return price;
+  }
+  return price;
+}
 
 // Minimum liquidity thresholds by chain (in USD)
 const MIN_LIQUIDITY = {
@@ -41,24 +60,6 @@ const chainIdentifiers: Record<Chain, string[]> = {
   'avalanche': ['avalanche', 'avax'],
   'solana': ['solana', 'sol']
 };
-
-function adjustPrice(price: number, symbol: string): number {
-  if (STABLECOINS.has(symbol)) {
-    if (price < 0.1) {
-      // Try different scaling factors to get to ~$1
-      const scalingFactors = [24000, 1000000, 100000000];
-      for (const factor of scalingFactors) {
-        const adjusted = price * factor;
-        if (adjusted >= 0.98 && adjusted <= 1.02) {
-          return adjusted;
-        }
-      }
-      return price;
-    }
-    return price;
-  }
-  return price;
-}
 
 function isValidPrice(symbol: string, rawPrice: number): boolean {
   const price = adjustPrice(rawPrice, symbol);
@@ -112,9 +113,24 @@ function filterValidPairs(pairs: DexScreenerPair[], chain: Chain): DexScreenerPa
       return false;
     }
 
-    // Rest of the validation logic remains unchanged
+    // Log the pair details for debugging
+    console.log(`\nValidating pair:`, {
+      dex: pair.dexId,
+      chainId: pair.chainId,
+      symbol: pair.baseToken.symbol,
+      price: pair.priceUsd,
+      liquidity: pair.liquidity?.usd
+    });
+
+    // Validate the price format and range
     const rawPrice = parseFloat(pair.priceUsd);
+    if (isNaN(rawPrice)) {
+      console.log(`Invalid price format: ${pair.priceUsd}`);
+      return false;
+    }
+
     const adjustedPrice = adjustPrice(rawPrice, pair.baseToken.symbol);
+    console.log(`Adjusted price for ${pair.baseToken.symbol}: $${adjustedPrice}`);
 
     if (PRICE_RANGES[pair.baseToken.symbol as keyof typeof PRICE_RANGES] && !isValidPrice(pair.baseToken.symbol, rawPrice)) {
       console.log(`Invalid price for ${pair.dexId}: $${adjustedPrice}`);
@@ -154,6 +170,14 @@ function filterValidPairs(pairs: DexScreenerPair[], chain: Chain): DexScreenerPa
         console.log(`Using fallback Base pair: ${bestPair.dexId} with $${bestPair.liquidity?.usd?.toLocaleString()} liquidity`);
         return [bestPair];
       }
+    }
+
+    // For stablecoins, use relaxed validation
+    const stablePairs = pairs.filter(p => STABLECOINS.has(p.baseToken.symbol));
+    if (stablePairs.length > 0) {
+      const bestStablePair = stablePairs.sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
+      console.log(`Using fallback stablecoin pair: ${bestStablePair.dexId} with $${bestStablePair.liquidity?.usd?.toLocaleString()} liquidity`);
+      return [bestStablePair];
     }
 
     // For other chains, use standard fallback
@@ -213,6 +237,7 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
   }
 
   try {
+    console.log(`\nFetching token analysis for ${tokenContract} on ${chain}`);
     const response = await axios.get<DexScreenerResponse>(
       `${DEXSCREENER_API}/dex/tokens/${tokenContract}`
     );
@@ -221,6 +246,8 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
       console.log(`No pairs found for token ${tokenContract}`);
       return null;
     }
+
+    console.log(`Found ${response.data.pairs.length} pairs, filtering valid ones...`);
 
     // Filter valid pairs for the specified chain
     const validPairs = filterValidPairs(response.data.pairs, chain);
@@ -284,12 +311,16 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
       priceDifferential: priceDifferential
     };
 
+    console.log('Token analysis result:', analysis);
+
     // Cache the analysis
     cache.set(cacheKey, analysis);
     return analysis;
   } catch (error) {
     if (axios.isAxiosError(error)) {
       console.error("DexScreener API error:", error.response?.data || error.message);
+    } else {
+      console.error("Unexpected error in getTokenAnalysis:", error);
     }
     return null;
   }

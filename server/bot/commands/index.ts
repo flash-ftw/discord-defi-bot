@@ -6,10 +6,12 @@ import * as helpCommand from "./help";
 const commands = [analyzeCommand, analyzeWalletCommand, helpCommand];
 
 export async function setupCommands(client: Client) {
+  // Create a collection of all commands
   const commandsCollection = new Collection(
     commands.map(cmd => [cmd.data.name, cmd])
   );
 
+  // Handle command interactions
   client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isChatInputCommand()) return;
 
@@ -19,11 +21,19 @@ export async function setupCommands(client: Client) {
     try {
       await command.execute(interaction);
     } catch (error) {
-      console.error(error);
+      console.error('Error executing command:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+
       if (interaction.replied || interaction.deferred) {
-        await interaction.followUp({ content: 'There was an error executing this command!', ephemeral: true });
+        await interaction.followUp({ 
+          content: `There was an error executing this command: ${errorMessage}`, 
+          ephemeral: true 
+        });
       } else {
-        await interaction.reply({ content: 'There was an error executing this command!', ephemeral: true });
+        await interaction.reply({ 
+          content: `There was an error executing this command: ${errorMessage}`, 
+          ephemeral: true 
+        });
       }
     }
   });
