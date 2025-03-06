@@ -82,11 +82,11 @@ export function startPriceTracking(client: Client) {
       }
 
       const ethPrice = Math.round(prices.ethereum.price);
-      const solPrice = prices.solana.price >= 1000 ? 
-        `${(prices.solana.price/1000).toFixed(1)}K` : 
+      const solPrice = prices.solana.price >= 1000 ?
+        `${(prices.solana.price / 1000).toFixed(1)}K` :
         prices.solana.price.toFixed(1);
 
-      const status = `ETH${ethPrice}•SOL${solPrice}`; // Ultra compact format with bullet separator
+      const status = `ETH$${ethPrice}|SOL$${solPrice}`; // Compact format with $ and | separator
       await client.user?.setActivity(status, { type: 3 }); // Type 3 is "Watching"
 
       console.log('Updated bot status with prices:', status);
