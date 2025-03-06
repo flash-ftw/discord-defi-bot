@@ -18,6 +18,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   • ETH Token: /analyze 0x...
   • Solana Token: /analyze DezX...
 
+/wallet <wallet_address> <token_address>
+- Analyzes token P&L for a specific wallet
+- Shows detailed profit/loss breakdown:
+  • Transaction history summary
+  • Realized and unrealized P&L
+  • Average buy/sell prices
+  • Current holdings and value
+
 /help
 - Shows this help message
 

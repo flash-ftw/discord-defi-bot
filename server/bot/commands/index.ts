@@ -1,8 +1,9 @@
 import { Client, Events, Collection } from "discord.js";
 import * as analyzeCommand from "./analyze";
+import * as analyzeWalletCommand from "./analyze-wallet";
 import * as helpCommand from "./help";
 
-const commands = [analyzeCommand, helpCommand];
+const commands = [analyzeCommand, analyzeWalletCommand, helpCommand];
 
 export async function setupCommands(client: Client) {
   const commandsCollection = new Collection(

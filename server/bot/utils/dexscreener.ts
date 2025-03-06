@@ -97,7 +97,7 @@ interface TokenAnalysis {
 }
 
 function isValidPrice(symbol: string, price: number): boolean {
-  const range = PRICE_RANGES[symbol];
+  const range = PRICE_RANGES[symbol as keyof typeof PRICE_RANGES];
   if (!range) return true; // Skip validation for unknown tokens
   return price >= range.min && price <= range.max;
 }
@@ -113,8 +113,8 @@ function filterValidPairs(pairs: DexScreenerPair[], chain: Chain): DexScreenerPa
 
     // Validate price if we have a range for this token
     const price = parseFloat(pair.priceUsd);
-    if (PRICE_RANGES[pair.baseToken.symbol] && !isValidPrice(pair.baseToken.symbol, price)) {
-      console.log(`Filtered out ${pair.dexId} pair with invalid price: $${price} (expected range: $${PRICE_RANGES[pair.baseToken.symbol].min}-${PRICE_RANGES[pair.baseToken.symbol].max})`);
+    if (PRICE_RANGES[pair.baseToken.symbol as keyof typeof PRICE_RANGES] && !isValidPrice(pair.baseToken.symbol, price)) {
+      console.log(`Filtered out ${pair.dexId} pair with invalid price: $${price} (expected range: $${PRICE_RANGES[pair.baseToken.symbol as keyof typeof PRICE_RANGES].min}-${PRICE_RANGES[pair.baseToken.symbol as keyof typeof PRICE_RANGES].max})`);
       return false;
     }
 
