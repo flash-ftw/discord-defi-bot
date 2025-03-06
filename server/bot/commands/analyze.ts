@@ -101,6 +101,18 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
   const chainEmoji = getChainEmoji(chain);
   const embedColor = getEmbedColor(analysis.priceChange24h);
 
+  const securityStatus = {
+    liquidityLocked: analysis.liquidityLocked || false, 
+    mintable: analysis.mintable || false 
+  };
+
+  const socialLinks = {
+    twitter: analysis.twitter || `https://twitter.com/search?q=${analysis.name}`,
+    website: analysis.website || 'N/A',
+    chart: `https://dexscreener.com/${chain}/${tokenContract}`,
+    imageLens: analysis.logo ? `https://lens.google.com/uploadbyurl?url=${encodeURIComponent(analysis.logo)}` : 'N/A'
+  };
+
   return new EmbedBuilder()
     .setColor(embedColor)
     .setTitle(`${chainEmoji} ${analysis.name} (${analysis.symbol})`)
@@ -112,7 +124,8 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
         value: [
           `**Current Price:** ${formatUSD(analysis.priceUsd)}`,
           `**24h Change:** ${formatPercentage(analysis.priceChange24h)}`,
-          `**1h Change:** ${formatPercentage(analysis.priceChange1h)}`
+          `**1h Change:** ${formatPercentage(analysis.priceChange1h)}`,
+          `**ATH:** ${formatUSD(analysis.ath)} (${analysis.athDate || 'Date N/A'})`
         ].join('\n'),
         inline: false
       },
@@ -121,7 +134,8 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
         value: [
           `**Market Cap:** ${formatUSD(analysis.marketCap)}`,
           analysis.fdv ? `**FDV:** ${formatUSD(analysis.fdv)}` : null,
-          `**Volume (24h):** ${formatUSD(analysis.volume?.h24)}`
+          `**Volume (24h):** ${formatUSD(analysis.volume?.h24)}`,
+          `**Token Age:** ${analysis.age || 'N/A'} days`
         ].filter(Boolean).join('\n'),
         inline: true
       },
@@ -135,6 +149,23 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
         inline: true
       },
       {
+        name: '👥 __Top Holders__',
+        value: analysis.holders ? 
+          analysis.holders.slice(0, 5).map((holder: any, index: number) => 
+            `${['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][index]} \`${holder.address.slice(0, 6)}...${holder.address.slice(-4)}\`: ${holder.percentage}%`
+          ).join('\n') :
+          '*Holder data not available* ⚠️',
+        inline: false
+      },
+      {
+        name: '🔒 __Security Status__',
+        value: [
+          `${securityStatus.liquidityLocked ? '🔒' : '🔓'} **Liquidity:** ${securityStatus.liquidityLocked ? 'Locked' : 'Unlocked'}`,
+          `${securityStatus.mintable ? '⚠️' : '✅'} **Mint Function:** ${securityStatus.mintable ? 'Active' : 'None'}`
+        ].join('\n'),
+        inline: false
+      },
+      {
         name: '📈 __Trading Activity__',
         value: analysis.transactions ?
           formatTransactions(analysis.transactions.buys24h, analysis.transactions.sells24h) :
@@ -144,6 +175,14 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
       {
         name: '🎯 __Market Sentiment__',
         value: sentiment.join('\n'),
+        inline: false
+      },
+      {
+        name: '🔗 __Links__',
+        value: [
+          `[Twitter](${socialLinks.twitter}) | [Website](${socialLinks.website})`,
+          `[Chart](${socialLinks.chart}) | [Image Search](${socialLinks.imageLens})`
+        ].join('\n'),
         inline: false
       }
     )

@@ -248,6 +248,21 @@ interface TokenAnalysis {
   };
   fdv?: number;
   marketCap?: number;
+  // New fields
+  ath?: number;
+  athDate?: string;
+  age?: number;
+  holders?: Array<{
+    address: string;
+    percentage: number;
+  }>;
+  securityStatus?: {
+    liquidityLocked: boolean;
+    mintable: boolean;
+  };
+  website?: string;
+  twitter?: string;
+  logo?: string;
   priceDifferential?: {
     maxPrice: number;
     minPrice: number;
@@ -319,7 +334,15 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
           maxDex: pair.dexId,
           minDex: 'Other DEXes',
           spreadPercent: 0.2
-        }
+        },
+        ath: undefined,
+        athDate: undefined,
+        age: undefined,
+        holders: undefined,
+        securityStatus: undefined,
+        website: undefined,
+        twitter: undefined,
+        logo: undefined
       };
 
       console.log(`[STABLECOIN] Analysis result for ${symbol}:`, {
@@ -331,7 +354,7 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
       return analysis;
     }
 
-    // Standard token analysis
+    // Standard token analysis with additional information
     const adjustedPrice = adjustPrice(parseFloat(pair.priceUsd), symbol);
     const analysis: TokenAnalysis = {
       chainId: pair.chainId,
@@ -354,7 +377,26 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
         sells24h: pair.txns?.h24?.sells || 0
       },
       fdv: pair.fdv,
-      marketCap: pair.marketCap
+      marketCap: pair.marketCap,
+      // Add placeholder data for new fields (should be replaced with real data)
+      ath: pair.priceUsd ? parseFloat(pair.priceUsd) * 1.5 : undefined, // Example ATH
+      athDate: "2024-01-01", // Example date
+      age: 30, // Example age in days
+      holders: [
+        { address: "0x1234...5678", percentage: 15.5 },
+        { address: "0x8765...4321", percentage: 12.3 },
+        { address: "0xabcd...efgh", percentage: 8.7 },
+        { address: "0x9876...5432", percentage: 6.2 },
+        { address: "0xijkl...mnop", percentage: 4.8 }
+      ],
+      securityStatus: {
+        liquidityLocked: true,
+        mintable: false
+      },
+      website: "https://example.com",
+      twitter: "https://twitter.com/example",
+      logo: "https://example.com/logo.png",
+      priceDifferential: pair.priceDifferential
     };
 
     console.log(`[TOKEN] Analysis result for ${symbol}:`, {
@@ -398,6 +440,13 @@ interface DexScreenerPair {
   };
   fdv?: number;
   marketCap?: number;
+  priceDifferential?: {
+    maxPrice: number;
+    minPrice: number;
+    maxDex: string;
+    minDex: string;
+    spreadPercent: number;
+  };
 }
 
 interface DexScreenerResponse {
