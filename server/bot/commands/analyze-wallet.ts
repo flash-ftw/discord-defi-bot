@@ -100,8 +100,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     const embed = new EmbedBuilder()
       .setColor(embedColor)
-      .setTitle(`${chainEmoji} ${tokenInfo.name} (${tokenInfo.symbol}) Wallet Analysis`)
-      .setDescription(`**Analyzing trades on ${chain.charAt(0).toUpperCase() + chain.slice(1)}** 🔍`)
+      .setTitle(`${chainEmoji} ${tokenInfo.name} (${tokenInfo.symbol})`)
+      .setDescription(`**Analyzing wallet \`${walletAddress}\` on ${chain.charAt(0).toUpperCase() + chain.slice(1)}** 🔍`)
       .addFields(
         {
           name: '💰 __Token Information__',
@@ -121,7 +121,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
           value: [
             `**Total Bought:** \`${analysis.totalBought.toLocaleString()}\` tokens 🔄`,
             `**Avg Buy Price:** ${formatUSD(analysis.averageBuyPrice)} 💸`,
-            `**Total Sold:** \`${analysis.totalSold.toLocaleString()}\` tokens 🔄`,
+            `**Total Sold:** \`${analysis.totalSold.toLocaleString()}\` tokens 🔴`,
             `**Avg Sell Price:** ${formatUSD(analysis.averageSellPrice)} 💰`,
             `**Current Holdings:** \`${analysis.currentHoldings.toLocaleString()}\` tokens 💎`
           ].join('\n'),
@@ -140,7 +140,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       )
       .setTimestamp()
       .setFooter({ 
-        text: `Wallet: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)} | Powered by DexScreener` 
+        text: `Powered by chefs for the cooks 👨‍🍳` 
       });
 
     await interaction.editReply({ embeds: [embed] });

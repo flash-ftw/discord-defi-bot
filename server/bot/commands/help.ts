@@ -1,40 +1,68 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder } from "discord.js";
 
 export const data = new SlashCommandBuilder()
   .setName('help')
   .setDescription('Shows available commands and usage information');
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  const helpMessage = `
-**Token Analysis Bot Commands**
+  const embed = new EmbedBuilder()
+    .setColor(0x5865F2) // Discord blurple color
+    .setTitle('🤖 __Crypto Analytics Bot Commands__')
+    .setDescription('**Your personal crypto market assistant** 🎯')
+    .addFields(
+      {
+        name: '📊 /analyze <token_address>',
+        value: [
+          '**Real-time token analysis across supported chains:**',
+          '• 💰 Current price and market metrics',
+          '• 📈 24h/1h price changes with trend indicators',
+          '• 💧 Liquidity analysis and volume tracking',
+          '• 🔄 Trading activity monitoring',
+          '• 🎯 Smart market sentiment analysis',
+          '',
+          '**Example:** `/analyze 0xdac17f958d2ee523a2206206994597c13d831ec7`'
+        ].join('\n'),
+        inline: false
+      },
+      {
+        name: '💼 /wallet <wallet_address> <token_address>',
+        value: [
+          '**Detailed wallet performance analysis:**',
+          '• 📊 Complete transaction history',
+          '• 💰 Realized and unrealized P&L tracking',
+          '• 📈 ROI calculations and metrics',
+          '• 💎 Current holdings analysis',
+          '',
+          '**Example:** `/wallet 0x28c6c06298d514db089934071355e5743bf21d60 0xdac17f958d2ee523a2206206994597c13d831ec7`'
+        ].join('\n'),
+        inline: false
+      },
+      {
+        name: '📈 /status',
+        value: [
+          '**Live market price tracking:**',
+          '• ⟠ ETH price and 24h change',
+          '• ◎ SOL price and 24h change',
+          '• 🕒 Real-time updates',
+          '',
+          '*Prices auto-update every minute*'
+        ].join('\n'),
+        inline: false
+      },
+      {
+        name: '🔗 __Supported Chains__',
+        value: [
+          '• ⟠ **Ethereum** (ETH)',
+          '• 🔷 **Base**',
+          '• 🔺 **Avalanche** (AVAX)',
+          '• ◎ **Solana** (SOL)'
+        ].join('\n'),
+        inline: false
+      }
+    )
+    .setFooter({ 
+      text: 'Made with 💜 by the cooks | Real-time DeFi analytics' 
+    });
 
-/analyze <token_address>
-- Analyzes a token across supported chains (Ethereum, Base, Avalanche, Solana)
-- Provides detailed market analysis including:
-  • Current price and 24h/1h changes
-  • Trading volume and liquidity metrics
-  • Price history (ATH/ATL)
-- Examples: 
-  • ETH Token: /analyze 0x...
-  • Solana Token: /analyze DezX...
-
-/wallet <wallet_address> <token_address>
-- Analyzes token P&L for a specific wallet
-- Shows detailed profit/loss breakdown:
-  • Transaction history summary
-  • Realized and unrealized P&L
-  • Average buy/sell prices
-  • Current holdings and value
-
-/help
-- Shows this help message
-
-**Supported Chains**
-• Ethereum (ETH)
-• Base
-• Avalanche (AVAX)
-• Solana (SOL)
-`;
-
-  await interaction.reply({ content: helpMessage });
+  await interaction.reply({ embeds: [embed] });
 }

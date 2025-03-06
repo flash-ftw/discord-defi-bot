@@ -131,7 +131,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const embed = new EmbedBuilder()
       .setColor(embedColor)
       .setTitle(`${chainEmoji} ${analysis.name} (${analysis.symbol})`)
-      .setDescription(`**Token Analysis on ${chain.charAt(0).toUpperCase() + chain.slice(1)}** 🔍`)
+      .setDescription(`**Token Analysis on ${chain.charAt(0).toUpperCase() + chain.slice(1)}** 🔍\n\nContract: \`${tokenContract}\``)
       .addFields(
         { 
           name: '💰 __Price Information__',
@@ -175,7 +175,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       )
       .setTimestamp()
       .setFooter({ 
-        text: `Contract: ${tokenContract.slice(0, 6)}...${tokenContract.slice(-4)} | Powered by DexScreener` 
+        text: `Powered by chefs for the cooks 👨‍🍳` 
       });
 
     await interaction.editReply({ embeds: [embed] });
