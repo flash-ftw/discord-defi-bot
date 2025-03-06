@@ -74,7 +74,7 @@ export async function getTransactionHistory(
 
     const currentPrice = response.priceUsd;
     const timestamp = new Date();
-    const isStablecoin = response.symbol === 'USDT';
+    const isStablecoin = response.symbol === 'USDT' || response.symbol === 'USDC';
 
     // Generate unique transaction patterns based on wallet address
     const walletSeed = parseInt(walletAddress.slice(-4), 16);
@@ -113,8 +113,6 @@ export async function getTransactionHistory(
       ];
     } else {
       const basePrice = currentPrice * 0.8; // Start from 20% lower
-      const priceGrowth = 1.1; // 10% growth between transactions
-
       switch(patternType) {
         case 0: // Long term holder
           mockTransactions = generateHodlPattern(walletAddress, tokenContract, chain, basePrice, timestamp);

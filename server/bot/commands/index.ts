@@ -2,8 +2,10 @@ import { Client, Events, Collection } from "discord.js";
 import * as analyzeCommand from "./analyze";
 import * as analyzeWalletCommand from "./analyze-wallet";
 import * as helpCommand from "./help";
+import * as statusCommand from "./status";
+import { startPriceTracking } from "../utils/price-tracker";
 
-const commands = [analyzeCommand, analyzeWalletCommand, helpCommand];
+const commands = [analyzeCommand, analyzeWalletCommand, helpCommand, statusCommand];
 const GUILD_ID = '995147630009139252';
 
 export async function setupCommands(client: Client) {
@@ -53,6 +55,9 @@ export async function setupCommands(client: Client) {
 
       const registeredCommands = await guild.commands.set(commands.map(cmd => cmd.data));
       console.log('Successfully registered commands:', registeredCommands.map(cmd => cmd.name));
+
+      // Start price tracking
+      startPriceTracking(client);
     } catch (error) {
       console.error('Error registering application commands:', error);
       if (error instanceof Error) {

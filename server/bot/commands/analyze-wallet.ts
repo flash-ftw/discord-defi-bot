@@ -1,5 +1,6 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { detectChain, analyzePnL } from "../utils/blockchain";
+import { getTokenAnalysis } from "../utils/dexscreener";
 
 export const data = new SlashCommandBuilder()
   .setName('wallet')
@@ -63,6 +64,19 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     console.log(`Analyzing wallet ${walletAddress} for token ${tokenContract} on ${chain}`);
 
+    // Get token details first
+    const tokenInfo = await getTokenAnalysis(tokenContract, chain);
+    if (!tokenInfo) {
+      await interaction.editReply('❌ Could not fetch token information. The token might not exist or have enough liquidity.');
+      return;
+    }
+
+    console.log(`Token information:`, {
+      symbol: tokenInfo.symbol,
+      name: tokenInfo.name,
+      currentPrice: tokenInfo.priceUsd
+    });
+
     // Get P&L analysis
     const analysis = await analyzePnL(walletAddress, tokenContract, chain);
     if (!analysis) {
@@ -76,7 +90,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       ((analysis.realizedPnL + analysis.unrealizedPnL) / totalInvestment) * 100 : 0;
 
     const response = [
-      `**Wallet Analysis for ${chain}**`,
+      `**${tokenInfo.name} (${tokenInfo.symbol}) Wallet Analysis on ${chain}**`,
+      `\n**Current Token Price**: ${formatUSD(tokenInfo.priceUsd)}`,
       `\n**Transaction Summary**`,
       `🔄 Total Buy Transactions: ${analysis.buyCount} trades`,
       `🔄 Total Sell Transactions: ${analysis.sellCount} trades`,
@@ -85,7 +100,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       `💰 Total Sold: ${analysis.totalSold.toLocaleString()} tokens at avg. ${formatUSD(analysis.averageSellPrice)}`,
       `💼 Current Holdings: ${analysis.currentHoldings.toLocaleString()} tokens`,
       `\n**Profit/Loss Analysis**`,
-      `Current Price: ${formatUSD(analysis.currentPrice)}`,
       `📊 Realized P&L: ${formatUSD(analysis.realizedPnL)}`,
       `📈 Unrealized P&L: ${formatUSD(analysis.unrealizedPnL)}`,
       `💫 Total P&L: ${formatUSD(analysis.realizedPnL + analysis.unrealizedPnL)} (${formatPercentage(totalPnLPercent)})`
