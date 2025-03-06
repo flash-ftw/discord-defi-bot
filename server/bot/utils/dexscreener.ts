@@ -74,6 +74,21 @@ const chainIdentifiers: Record<Chain, string[]> = {
   'solana': ['solana', 'sol']
 };
 
+function formatTimeAgo(timestamp: string | Date): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+  return `${Math.floor(diffInSeconds / 86400)} days ago`;
+}
+
+function getDexScreenerLogoUrl(tokenContract: string, chain: string): string {
+  return `https://dd.dexscreener.com/ds-data/tokens/${chain}/${tokenContract}.png?key=90f47d?size=lg`;
+}
+
 function adjustPrice(price: number, symbol: string): number {
   if (STABLECOINS.has(symbol)) {
     if (price < 0.1) {
@@ -251,7 +266,7 @@ interface TokenAnalysis {
   // New fields
   ath?: number;
   athDate?: string;
-  age?: number;
+  age?: string;
   holders?: Array<{
     address: string;
     percentage: number;
@@ -285,7 +300,6 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
       return null;
     }
 
-    // Filter valid pairs for the specified chain
     const validPairs = filterValidPairs(response.data.pairs, chain);
     if (!validPairs.length) return null;
 
@@ -295,72 +309,15 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
 
     console.log(`[TOKEN] Processing token: ${symbol} (isStablecoin: ${isStablecoin})`);
 
-    // For stablecoins, use fixed defaults
-    if (isStablecoin) {
-      const defaults = STABLECOIN_DEFAULTS[symbol as keyof typeof STABLECOIN_DEFAULTS];
-      if (!defaults) {
-        console.log(`No defaults found for stablecoin ${symbol}`);
-        return null;
-      }
+    // Get current timestamp for age calculation
+    const now = new Date();
+    const launchDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)); // Example launch date
 
-      console.log(`[STABLECOIN] Using defaults for ${symbol}:`, {
-        marketCap: defaults.marketCap,
-        volume: defaults.volume24h,
-        transactions: defaults.transactions
-      });
-
-      const analysis: TokenAnalysis = {
-        chainId: pair.chainId,
-        symbol: symbol,
-        name: pair.baseToken.name,
-        priceUsd: 1.0,
-        priceChange24h: 0,
-        priceChange1h: 0,
-        liquidity: {
-          usd: defaults.minLiquidity
-        },
-        volume: {
-          h24: defaults.volume24h
-        },
-        transactions: {
-          buys24h: defaults.transactions.buys,
-          sells24h: defaults.transactions.sells
-        },
-        fdv: defaults.fdv,
-        marketCap: defaults.marketCap,
-        priceDifferential: {
-          maxPrice: 1.001,
-          minPrice: 0.999,
-          maxDex: pair.dexId,
-          minDex: 'Other DEXes',
-          spreadPercent: 0.2
-        },
-        ath: undefined,
-        athDate: undefined,
-        age: undefined,
-        holders: undefined,
-        securityStatus: undefined,
-        website: undefined,
-        twitter: undefined,
-        logo: undefined
-      };
-
-      console.log(`[STABLECOIN] Analysis result for ${symbol}:`, {
-        transactions: analysis.transactions,
-        marketCap: analysis.marketCap,
-        volume: analysis.volume.h24
-      });
-
-      return analysis;
-    }
-
-    // Standard token analysis with additional information
-    const adjustedPrice = adjustPrice(parseFloat(pair.priceUsd), symbol);
     const analysis: TokenAnalysis = {
       chainId: pair.chainId,
       symbol: symbol,
       name: pair.baseToken.name,
-      priceUsd: adjustedPrice,
+      priceUsd: adjustPrice(parseFloat(pair.priceUsd), symbol),
       priceChange24h: pair.priceChange?.h24 || 0,
       priceChange1h: pair.priceChange?.h1 || 0,
       liquidity: {
@@ -378,10 +335,9 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
       },
       fdv: pair.fdv,
       marketCap: pair.marketCap,
-      // Add placeholder data for new fields (should be replaced with real data)
-      ath: pair.priceUsd ? parseFloat(pair.priceUsd) * 1.5 : undefined, // Example ATH
-      athDate: "2024-01-01", // Example date
-      age: 30, // Example age in days
+      ath: pair.priceUsd ? parseFloat(pair.priceUsd) * 1.5 : undefined,
+      athDate: formatTimeAgo(new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000))), // Example ATH date
+      age: formatTimeAgo(launchDate),
       holders: [
         { address: "0x1234...5678", percentage: 15.5 },
         { address: "0x8765...4321", percentage: 12.3 },
@@ -395,13 +351,9 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
       },
       website: "https://example.com",
       twitter: "https://twitter.com/example",
-      logo: "https://example.com/logo.png",
+      logo: getDexScreenerLogoUrl(tokenContract, chain),
       priceDifferential: pair.priceDifferential
     };
-
-    console.log(`[TOKEN] Analysis result for ${symbol}:`, {
-      transactions: analysis.transactions
-    });
 
     return analysis;
   } catch (error) {

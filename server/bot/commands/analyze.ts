@@ -110,14 +110,14 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
     twitter: analysis.twitter || `https://twitter.com/search?q=${analysis.name}`,
     website: analysis.website || 'N/A',
     chart: `https://dexscreener.com/${chain}/${tokenContract}`,
-    imageLens: analysis.logo ? `https://lens.google.com/uploadbyurl?url=${encodeURIComponent(analysis.logo)}` : 'N/A'
+    imageLens: `https://lens.google.com/uploadbyurl?url=${encodeURIComponent(analysis.logo)}`
   };
 
   return new EmbedBuilder()
     .setColor(embedColor)
     .setTitle(`${chainEmoji} ${analysis.name} (${analysis.symbol})`)
     .setDescription(`**Token Analysis on ${chain.charAt(0).toUpperCase() + chain.slice(1)}** 🔍\n\nContract: \`${tokenContract}\``)
-    .setThumbnail('attachment://TBD_logo-removebg-preview.png')
+    .setThumbnail(analysis.logo)
     .addFields(
       { 
         name: '💰 __Price Information__',
@@ -125,7 +125,7 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
           `**Current Price:** ${formatUSD(analysis.priceUsd)}`,
           `**24h Change:** ${formatPercentage(analysis.priceChange24h)}`,
           `**1h Change:** ${formatPercentage(analysis.priceChange1h)}`,
-          `**ATH:** ${formatUSD(analysis.ath)} (${analysis.athDate || 'Date N/A'})`
+          `**ATH:** ${formatUSD(analysis.ath)} (${analysis.athDate})`
         ].join('\n'),
         inline: false
       },
@@ -135,7 +135,7 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
           `**Market Cap:** ${formatUSD(analysis.marketCap)}`,
           analysis.fdv ? `**FDV:** ${formatUSD(analysis.fdv)}` : null,
           `**Volume (24h):** ${formatUSD(analysis.volume?.h24)}`,
-          `**Token Age:** ${analysis.age || 'N/A'} days`
+          `**Token Age:** ${analysis.age}`
         ].filter(Boolean).join('\n'),
         inline: true
       },
@@ -186,6 +186,7 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
         inline: false
       }
     )
+    .setImage('attachment://TBD_logo-removebg-preview.png')
     .setTimestamp()
     .setFooter({ 
       text: `Powered by chefs for the cooks 👨‍🍳` 
