@@ -5,6 +5,10 @@ import NodeCache from "node-cache";
 const DEXSCREENER_API = "https://api.dexscreener.com/latest";
 const cache = new NodeCache({ stdTTL: 300 }); // 5 minutes cache
 
+// Clear the cache on startup
+cache.flushAll();
+console.log('DexScreener cache cleared');
+
 // Update PRICE_RANGES to include more accurate USDT range
 const PRICE_RANGES = {
   'WETH': { min: 2000, max: 3000 },
@@ -255,14 +259,8 @@ interface TokenAnalysis {
 
 // Simplify stablecoin data handling
 export async function getTokenAnalysis(tokenContract: string, chain: Chain): Promise<TokenAnalysis | null> {
-  const cacheKey = `${chain}:${tokenContract}`;
-  const cached = cache.get<TokenAnalysis>(cacheKey);
-  if (cached) {
-    return cached;
-  }
-
   try {
-    console.log(`\nFetching token analysis for ${tokenContract} on ${chain}`);
+    console.log(`\n[ANALYSIS] Starting analysis for token ${tokenContract} on ${chain}`);
     const response = await axios.get<DexScreenerResponse>(
       `${DEXSCREENER_API}/dex/tokens/${tokenContract}`
     );
@@ -276,35 +274,31 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
     const validPairs = filterValidPairs(response.data.pairs, chain);
     if (!validPairs.length) return null;
 
-    // Sort pairs by liquidity and volume
-    const sortedPairs = validPairs.sort((a, b) => {
-      const aScore = (a.liquidity?.usd || 0) + (a.volume?.h24 || 0);
-      const bScore = (b.liquidity?.usd || 0) + (b.volume?.h24 || 0);
-      return bScore - aScore;
-    });
+    const pair = validPairs[0];
+    const symbol = pair.baseToken.symbol.toUpperCase();
+    const isStablecoin = STABLECOINS.has(symbol);
 
-    const pair = sortedPairs[0];
-    const isStablecoin = STABLECOINS.has(pair.baseToken.symbol);
+    console.log(`[TOKEN] Processing token: ${symbol} (isStablecoin: ${isStablecoin})`);
 
     // For stablecoins, use fixed defaults
     if (isStablecoin) {
-      const defaults = STABLECOIN_DEFAULTS[pair.baseToken.symbol as keyof typeof STABLECOIN_DEFAULTS];
-      console.log(`[STABLECOIN] Processing ${pair.baseToken.symbol} with defaults:`, {
-        defaultTransactions: defaults?.transactions,
-        defaultVolume: defaults?.volume24h,
-        defaultMarketCap: defaults?.marketCap
-      });
-
+      const defaults = STABLECOIN_DEFAULTS[symbol as keyof typeof STABLECOIN_DEFAULTS];
       if (!defaults) {
-        console.log(`No defaults found for stablecoin ${pair.baseToken.symbol}`);
+        console.log(`No defaults found for stablecoin ${symbol}`);
         return null;
       }
 
+      console.log(`[STABLECOIN] Using defaults for ${symbol}:`, {
+        marketCap: defaults.marketCap,
+        volume: defaults.volume24h,
+        transactions: defaults.transactions
+      });
+
       const analysis: TokenAnalysis = {
         chainId: pair.chainId,
-        symbol: pair.baseToken.symbol,
+        symbol: symbol,
         name: pair.baseToken.name,
-        priceUsd: 1.0, // Fixed price for stablecoins
+        priceUsd: 1.0,
         priceChange24h: 0,
         priceChange1h: 0,
         liquidity: {
@@ -328,22 +322,20 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
         }
       };
 
-      console.log('[STABLECOIN] Analysis result:', {
-        symbol: analysis.symbol,
+      console.log(`[STABLECOIN] Analysis result for ${symbol}:`, {
         transactions: analysis.transactions,
         marketCap: analysis.marketCap,
         volume: analysis.volume.h24
       });
 
-      cache.set(cacheKey, analysis);
       return analysis;
     }
 
     // Standard token analysis
-    const adjustedPrice = adjustPrice(parseFloat(pair.priceUsd), pair.baseToken.symbol);
+    const adjustedPrice = adjustPrice(parseFloat(pair.priceUsd), symbol);
     const analysis: TokenAnalysis = {
       chainId: pair.chainId,
-      symbol: pair.baseToken.symbol,
+      symbol: symbol,
       name: pair.baseToken.name,
       priceUsd: adjustedPrice,
       priceChange24h: pair.priceChange?.h24 || 0,
@@ -365,15 +357,13 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
       marketCap: pair.marketCap
     };
 
-    console.log('Token analysis result:', {
-      symbol: analysis.symbol,
+    console.log(`[TOKEN] Analysis result for ${symbol}:`, {
       transactions: analysis.transactions
     });
 
-    cache.set(cacheKey, analysis);
     return analysis;
   } catch (error) {
-    console.error("Error in getTokenAnalysis:", error);
+    console.error("[ERROR] Error in getTokenAnalysis:", error);
     return null;
   }
 }
