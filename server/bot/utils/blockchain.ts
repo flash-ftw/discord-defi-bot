@@ -54,30 +54,55 @@ export async function getTransactionHistory(
   chain: Chain
 ): Promise<InsertTransaction[]> {
   try {
-    // Use DexScreener API to fetch transaction history for the wallet
+    // Use DexScreener API to fetch current token price
     const response = await getTokenAnalysis(tokenContract, chain);
     if (!response) {
       console.log(`No transaction data found for token ${tokenContract} on ${chain}`);
       return [];
     }
 
-    // For testing purposes, create sample transactions that demonstrate P&L scenarios
+    const currentPrice = response.priceUsd;
+    const timestamp = new Date();
+
+    // Generate more realistic transaction scenarios based on current price
     const mockTransactions: InsertTransaction[] = [
+      // Initial entry - large buy at -20% from current price (7 days ago)
       {
         walletAddress,
         tokenContract,
-        amount: "100", // Buy 100 tokens
-        priceUsd: (response.priceUsd * 0.9).toString(), // Bought at 10% below current price
-        timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+        amount: "10000",
+        priceUsd: (currentPrice * 0.8).toString(),
+        timestamp: new Date(timestamp.getTime() - 7 * 24 * 60 * 60 * 1000),
         chain,
         type: "buy"
       },
+      // Add position - medium buy at -10% (5 days ago)
       {
         walletAddress,
         tokenContract,
-        amount: "50", // Sell half
-        priceUsd: (response.priceUsd * 1.1).toString(), // Sold at 10% above current price
-        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+        amount: "5000",
+        priceUsd: (currentPrice * 0.9).toString(),
+        timestamp: new Date(timestamp.getTime() - 5 * 24 * 60 * 60 * 1000),
+        chain,
+        type: "buy"
+      },
+      // Take profit - small sell at +15% (3 days ago)
+      {
+        walletAddress,
+        tokenContract,
+        amount: "3000",
+        priceUsd: (currentPrice * 1.15).toString(),
+        timestamp: new Date(timestamp.getTime() - 3 * 24 * 60 * 60 * 1000),
+        chain,
+        type: "sell"
+      },
+      // Take profit - medium sell at +10% (1 day ago)
+      {
+        walletAddress,
+        tokenContract,
+        amount: "5000",
+        priceUsd: (currentPrice * 1.1).toString(),
+        timestamp: new Date(timestamp.getTime() - 1 * 24 * 60 * 60 * 1000),
         chain,
         type: "sell"
       }
@@ -99,6 +124,8 @@ interface PnLAnalysis {
   unrealizedPnL: number;
   realizedPnL: number;
   currentPrice: number;
+  buyCount: number;   // Number of buy transactions
+  sellCount: number;  // Number of sell transactions
 }
 
 export async function analyzePnL(
@@ -118,6 +145,8 @@ export async function analyzePnL(
     let totalBoughtValue = 0;
     let totalSold = 0;
     let totalSoldValue = 0;
+    let buyCount = 0;
+    let sellCount = 0;
 
     transactions.forEach(tx => {
       const amount = parseFloat(tx.amount);
@@ -126,9 +155,11 @@ export async function analyzePnL(
       if (tx.type === "buy") {
         totalBought += amount;
         totalBoughtValue += amount * price;
+        buyCount++;
       } else {
         totalSold += amount;
         totalSoldValue += amount * price;
+        sellCount++;
       }
     });
 
@@ -148,7 +179,9 @@ export async function analyzePnL(
       currentHoldings,
       unrealizedPnL,
       realizedPnL,
-      currentPrice
+      currentPrice,
+      buyCount,
+      sellCount
     };
   } catch (error) {
     console.error("Error analyzing PnL:", error);

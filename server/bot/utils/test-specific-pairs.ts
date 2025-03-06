@@ -3,19 +3,24 @@ import { supportedChains } from "@shared/schema";
 
 const TEST_PAIRS = [
   {
-    wallet: "0x28c6c06298d514db089934071355e5743bf21d60",
-    token: "0xdAC17F958D2ee523a2206206994597C13D831ec7", // USDT
-    chain: "ethereum"
+    chain: "solana",
+    wallet: "47b3pp5G7ZQJ15U1nEgRmorUfVTwrotgsFeyfdhgpump", // Test wallet
+    token: "47b3pp5G7ZQJ15U1nEgRmorUfVTwrotgsFeyfdhgpump"  // Token contract
   },
   {
-    wallet: "0xf23E360A36c6f35c27ddB05e30DD015b215585a1",
-    token: "0x76e222b07C53D28b89b0bAc18602810Fc22B49A8", // Base token
-    chain: "base"
+    chain: "ethereum",
+    wallet: "0x28c6c06298d514db089934071355e5743bf21d60", // Test wallet
+    token: "0xd6203889C22D9fe5e938a9200f50FDFFE9dD8e02"  // Token contract
   },
   {
-    wallet: "0x94972103a306e9578C7098e8E46864356F592Fa4",
-    token: "0x739f93504a9e26D5973862Dbc4A44178cC26485", // Token on Base
-    chain: "base"
+    chain: "base",
+    wallet: "0xf23E360A36c6f35c27ddB05e30DD015b215585a1", // Test wallet
+    token: "0x18b6f6049A0af4Ed2BBe0090319174EeeF89f53a"  // Token contract
+  },
+  {
+    chain: "avalanche",
+    wallet: "0x94972103a306e9578C7098e8E46864356F592Fa4", // Test wallet
+    token: "0x79Ea4E536f598dCd67C76Ee3829f84AB9E72A558"  // Token contract
   }
 ];
 
@@ -31,9 +36,9 @@ async function testSpecificPairs() {
       if (analysis) {
         console.log("\nP&L Analysis Results:");
         console.log(`Current Price: $${analysis.currentPrice.toFixed(6)}`);
-        console.log(`Total Bought: ${analysis.totalBought} tokens @ $${analysis.averageBuyPrice.toFixed(6)}`);
-        console.log(`Total Sold: ${analysis.totalSold} tokens @ $${analysis.averageSellPrice.toFixed(6)}`);
-        console.log(`Current Holdings: ${analysis.currentHoldings} tokens`);
+        console.log(`Total Bought: ${analysis.totalBought.toLocaleString()} tokens @ $${analysis.averageBuyPrice.toFixed(6)}`);
+        console.log(`Total Sold: ${analysis.totalSold.toLocaleString()} tokens @ $${analysis.averageSellPrice.toFixed(6)}`);
+        console.log(`Current Holdings: ${analysis.currentHoldings.toLocaleString()} tokens`);
         console.log(`Realized P&L: $${analysis.realizedPnL.toFixed(2)}`);
         console.log(`Unrealized P&L: $${analysis.unrealizedPnL.toFixed(2)}`);
         console.log(`Total P&L: $${(analysis.realizedPnL + analysis.unrealizedPnL).toFixed(2)}`);

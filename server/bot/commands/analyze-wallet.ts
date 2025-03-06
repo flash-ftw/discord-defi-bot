@@ -57,16 +57,19 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       (analysis.totalBought * analysis.averageBuyPrice)) * 100;
 
     const response = [
-      `**Wallet P&L Analysis for ${chain}**`,
+      `**Wallet Analysis for ${chain}**`,
       `\n**Transaction Summary**`,
-      `Total Bought: ${analysis.totalBought.toLocaleString()} tokens at avg. ${formatUSD(analysis.averageBuyPrice)}`,
-      `Total Sold: ${analysis.totalSold.toLocaleString()} tokens at avg. ${formatUSD(analysis.averageSellPrice)}`,
-      `Current Holdings: ${analysis.currentHoldings.toLocaleString()} tokens`,
+      `🔄 Total Buy Transactions: ${analysis.buyCount} trades`,
+      `🔄 Total Sell Transactions: ${analysis.sellCount} trades`,
+      `\n**Position Details**`,
+      `💰 Total Bought: ${analysis.totalBought.toLocaleString()} tokens at avg. ${formatUSD(analysis.averageBuyPrice)}`,
+      `💰 Total Sold: ${analysis.totalSold.toLocaleString()} tokens at avg. ${formatUSD(analysis.averageSellPrice)}`,
+      `💼 Current Holdings: ${analysis.currentHoldings.toLocaleString()} tokens`,
       `\n**Profit/Loss Analysis**`,
       `Current Price: ${formatUSD(analysis.currentPrice)}`,
-      `Realized P&L: ${formatUSD(analysis.realizedPnL)}`,
-      `Unrealized P&L: ${formatUSD(analysis.unrealizedPnL)}`,
-      `Total P&L: ${formatUSD(analysis.realizedPnL + analysis.unrealizedPnL)} (${formatPercentage(totalPnLPercent)})`
+      `📊 Realized P&L: ${formatUSD(analysis.realizedPnL)}`,
+      `📈 Unrealized P&L: ${formatUSD(analysis.unrealizedPnL)}`,
+      `💫 Total P&L: ${formatUSD(analysis.realizedPnL + analysis.unrealizedPnL)} (${formatPercentage(totalPnLPercent)})`
     ].join('\n');
 
     await interaction.editReply({ content: response });
