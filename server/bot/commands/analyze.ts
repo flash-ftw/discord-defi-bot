@@ -19,13 +19,18 @@ function formatPercentage(value: number): string {
 
 function formatUSD(value: number | undefined): string {
   if (value === undefined) return 'N/A';
+  if (value >= 1000000000) {
+    return `$${(value / 1000000000).toFixed(2)}B`;
+  } else if (value >= 1000000) {
+    return `$${(value / 1000000).toFixed(2)}M`;
+  }
   return `$${value.toLocaleString(undefined, { maximumFractionDigits: 6 })}`;
 }
 
 function formatTransactions(buys: number, sells: number): string {
   const ratio = buys / (sells || 1);
   const signal = ratio > 1.5 ? '🟢' : ratio < 0.67 ? '🔴' : '🟡';
-  return `${buys} buys 📥 | ${sells} sells 📤 ${signal}`;
+  return `${buys.toLocaleString()} buys 📥 | ${sells.toLocaleString()} sells 📤 ${signal}`;
 }
 
 function validateTokenAddress(address: string): boolean {
@@ -58,6 +63,7 @@ function analyzeMarketSentiment(analysis: any): string {
 
     // Buy/Sell ratio analysis
     if (analysis.transactions) {
+      console.log('Analyzing transactions for sentiment:', analysis.transactions);
       const ratio = analysis.transactions.buys24h / (analysis.transactions.sells24h || 1);
       if (ratio > 1.5) signals.push('💫 Strong buying pressure');
       else if (ratio < 0.67) signals.push('⚠️ Heavy selling');
@@ -106,6 +112,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     console.log(`Token analysis received:`, analysis);
 
+    // Log transaction data specifically for debugging
+    if (analysis.transactions) {
+      console.log('Processing transactions:', {
+        buys: analysis.transactions.buys24h,
+        sells: analysis.transactions.sells24h,
+        symbol: analysis.symbol,
+        isStablecoin: analysis.symbol === 'USDT' || analysis.symbol === 'USDC'
+      });
+    }
+
     // Format response with detailed analysis
     const response = [
       `**${analysis.name} (${analysis.symbol}) Analysis**`,
@@ -129,9 +145,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       analyzeMarketSentiment(analysis)
     ].filter(Boolean).join('\n');
 
-    await interaction.editReply({
-      content: response
-    });
+    await interaction.editReply({ content: response });
 
   } catch (error) {
     console.error('Error in analyze command:', error);
