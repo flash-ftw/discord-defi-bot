@@ -12,14 +12,14 @@ export const data = new SlashCommandBuilder()
       .setRequired(true)
   );
 
-// Helper functions...
-function formatPercentage(value: number): string {
+// Export and split helper functions for better organization
+export function formatPercentage(value: number): string {
   const sign = value >= 0 ? '🚀' : '🔻';
   const color = value >= 0 ? '💚' : '❤️';
   return `${sign} ${color} \`${Math.abs(value).toFixed(2)}%\``;
 }
 
-function formatUSD(value: number | undefined): string {
+export function formatUSD(value: number | undefined): string {
   if (value === undefined) return '`N/A`';
   if (value >= 1000000000) {
     return `\`$${(value / 1000000000).toFixed(2)}B\``;
@@ -29,13 +29,13 @@ function formatUSD(value: number | undefined): string {
   return `\`$${value.toLocaleString(undefined, { maximumFractionDigits: 6 })}\``;
 }
 
-function formatTransactions(buys: number, sells: number): string {
+export function formatTransactions(buys: number, sells: number): string {
   const ratio = buys / (sells || 1);
   const signal = ratio > 1.5 ? '💫' : ratio < 0.67 ? '⚠️' : '⚖️';
   return `${signal} \`${buys.toLocaleString()}\` buys 📥 vs \`${sells.toLocaleString()}\` sells 📤`;
 }
 
-function getChainEmoji(chain: string): string {
+export function getChainEmoji(chain: string): string {
   switch(chain.toLowerCase()) {
     case 'ethereum': return '⟠';
     case 'base': return '🔷';
@@ -45,7 +45,7 @@ function getChainEmoji(chain: string): string {
   }
 }
 
-function getEmbedColor(priceChange24h: number): number {
+export function getEmbedColor(priceChange24h: number): number {
   if (priceChange24h > 5) return 0x00ff00; // Strong green
   if (priceChange24h > 0) return 0x90EE90; // Light green
   if (priceChange24h < -5) return 0xff0000; // Strong red
@@ -53,7 +53,7 @@ function getEmbedColor(priceChange24h: number): number {
   return 0x5865F2; // Discord blurple for neutral
 }
 
-function analyzeMarketSentiment(analysis: any): string[] {
+export function analyzeMarketSentiment(analysis: any): string[] {
   const signals = [];
 
   try {
@@ -72,13 +72,13 @@ function analyzeMarketSentiment(analysis: any): string[] {
   }
 }
 
-function validateTokenAddress(address: string): boolean {
+export function validateTokenAddress(address: string): boolean {
   const evmPattern = /^0x[a-fA-F0-9]{40}$/;
   const solanaPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
   return evmPattern.test(address) || solanaPattern.test(address);
 }
 
-// Explicitly export the createTokenEmbed function
+// Explicitly export createTokenEmbed for use in other files
 export function createTokenEmbed(analysis: any, tokenContract: string, chain: string): EmbedBuilder {
   const sentiment = analyzeMarketSentiment(analysis);
   const chainEmoji = getChainEmoji(chain);
