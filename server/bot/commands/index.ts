@@ -12,8 +12,8 @@ const GUILD_ID = '995147630009139252';
 
 // Contract address detection regex patterns
 const CONTRACT_PATTERNS = {
-  evm: /0x[a-fA-F0-9]{40}/gi,
-  solana: /[1-9A-HJ-NP-Za-km-z]{32,44}/gi
+  evm: /0x[a-fA-F0-9]{40}/g,
+  solana: /[1-9A-HJ-NP-Za-km-z]{32,44}/g
 };
 
 export async function setupCommands(client: Client) {
@@ -32,58 +32,54 @@ export async function setupCommands(client: Client) {
     try {
       await command.execute(interaction);
     } catch (error) {
-      console.error('Command execution error:', error instanceof Error ? error.message : 'Unknown error');
-      const errorMessage = 'There was an error executing this command.';
+      console.error('Error executing command:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
 
       if (interaction.replied || interaction.deferred) {
-        await interaction.followUp({ content: errorMessage, ephemeral: true });
+        await interaction.followUp({ 
+          content: `There was an error executing this command: ${errorMessage}`, 
+          ephemeral: true 
+        });
       } else {
-        await interaction.reply({ content: errorMessage, ephemeral: true });
+        await interaction.reply({ 
+          content: `There was an error executing this command: ${errorMessage}`, 
+          ephemeral: true 
+        });
       }
     }
   });
 
   // Add message event listener for contract detection
   client.on(Events.MessageCreate, async message => {
+    // Ignore bot messages and commands
     if (message.author.bot || message.content.startsWith('/')) return;
 
     try {
-      // Extract contract addresses using case-insensitive global regex
-      const evmContracts = [...(message.content.matchAll(CONTRACT_PATTERNS.evm) || [])].map(match => match[0]);
-      const solanaContracts = [...(message.content.matchAll(CONTRACT_PATTERNS.solana) || [])].map(match => match[0]);
+      // Look for EVM and Solana contract addresses
+      const evmContracts = message.content.match(CONTRACT_PATTERNS.evm) || [];
+      const solanaContracts = message.content.match(CONTRACT_PATTERNS.solana) || [];
       const contracts = [...evmContracts, ...solanaContracts];
 
-      // Debug log
-      console.log('Found contracts in message:', contracts);
-
+      // Process first found contract address
       if (contracts.length > 0) {
         const contract = contracts[0];
+        console.log(`Detected contract address in message: ${contract}`);
 
-        // Try to detect chain and analyze
+        // Detect chain and get analysis
         const chain = await detectChain(contract);
-        if (!chain) {
-          console.log(`No chain detected for contract: ${contract}`);
-          return;
-        }
+        if (!chain) return;
 
-        console.log(`Detected chain ${chain} for contract ${contract}`);
         const analysis = await getTokenAnalysis(contract, chain);
-        if (!analysis) {
-          console.log(`No analysis available for contract: ${contract}`);
-          return;
-        }
+        if (!analysis) return;
 
-        // Create and send embed
-        try {
-          const embed = analyzeCommand.createTokenEmbed(analysis, contract, chain);
-          await message.reply({ embeds: [embed] });
-          console.log('Successfully sent token analysis');
-        } catch (embedError) {
-          console.error('Error creating or sending embed:', embedError);
-        }
+        // Create embed response
+        const embed = analyzeCommand.createTokenEmbed(analysis, contract, chain);
+
+        // Reply with analysis
+        await message.reply({ embeds: [embed] });
       }
     } catch (error) {
-      console.error('Message processing error:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Error processing message for contracts:', error);
     }
   });
 
@@ -96,13 +92,20 @@ export async function setupCommands(client: Client) {
         return;
       }
 
+      console.log(`Registering commands for guild: ${guild.name} (${GUILD_ID})`);
+      console.log('Commands to register:', commands.map(cmd => cmd.data.name));
+
       const registeredCommands = await guild.commands.set(commands.map(cmd => cmd.data));
       console.log('Successfully registered commands:', registeredCommands.map(cmd => cmd.name));
 
       // Start price tracking
       startPriceTracking(client);
     } catch (error) {
-      console.error('Bot initialization error:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Error registering application commands:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+        console.error('Stack trace:', error.stack);
+      }
     }
   });
 }

@@ -12,14 +12,13 @@ export const data = new SlashCommandBuilder()
       .setRequired(true)
   );
 
-// Export and split helper functions for better organization
-export function formatPercentage(value: number): string {
+function formatPercentage(value: number): string {
   const sign = value >= 0 ? '🚀' : '🔻';
   const color = value >= 0 ? '💚' : '❤️';
   return `${sign} ${color} \`${Math.abs(value).toFixed(2)}%\``;
 }
 
-export function formatUSD(value: number | undefined): string {
+function formatUSD(value: number | undefined): string {
   if (value === undefined) return '`N/A`';
   if (value >= 1000000000) {
     return `\`$${(value / 1000000000).toFixed(2)}B\``;
@@ -29,13 +28,13 @@ export function formatUSD(value: number | undefined): string {
   return `\`$${value.toLocaleString(undefined, { maximumFractionDigits: 6 })}\``;
 }
 
-export function formatTransactions(buys: number, sells: number): string {
+function formatTransactions(buys: number, sells: number): string {
   const ratio = buys / (sells || 1);
   const signal = ratio > 1.5 ? '💫' : ratio < 0.67 ? '⚠️' : '⚖️';
   return `${signal} \`${buys.toLocaleString()}\` buys 📥 vs \`${sells.toLocaleString()}\` sells 📤`;
 }
 
-export function getChainEmoji(chain: string): string {
+function getChainEmoji(chain: string): string {
   switch(chain.toLowerCase()) {
     case 'ethereum': return '⟠';
     case 'base': return '🔷';
@@ -45,7 +44,7 @@ export function getChainEmoji(chain: string): string {
   }
 }
 
-export function getEmbedColor(priceChange24h: number): number {
+function getEmbedColor(priceChange24h: number): number {
   if (priceChange24h > 5) return 0x00ff00; // Strong green
   if (priceChange24h > 0) return 0x90EE90; // Light green
   if (priceChange24h < -5) return 0xff0000; // Strong red
@@ -53,32 +52,50 @@ export function getEmbedColor(priceChange24h: number): number {
   return 0x5865F2; // Discord blurple for neutral
 }
 
-export function analyzeMarketSentiment(analysis: any): string[] {
+function analyzeMarketSentiment(analysis: any): string[] {
   const signals = [];
 
   try {
+    // Price momentum
     if (analysis.priceChange1h > 0 && analysis.priceChange24h > 0) {
-      signals.push('mfs buying the whole supply 🚀🌙');
+      signals.push('🚀 **Strong Bullish Momentum** 💫');
     } else if (analysis.priceChange1h < 0 && analysis.priceChange24h < 0) {
-      signals.push('mfs selling everything 📉💀');
-    } else {
-      signals.push('mfs sleeping now 😴💤');
+      signals.push('🐻 **Bearish Pressure** ⚠️');
     }
 
-    return signals;
+    // Volume analysis
+    if (analysis.volume?.h24 > 0) {
+      const hourlyVolume = (analysis.volume.h24 / 24);
+      if (analysis.volume?.h1 > hourlyVolume * 1.5) {
+        signals.push('📊 **High Volume Alert** 🔥');
+      }
+    }
+
+    // Buy/Sell ratio analysis
+    if (analysis.transactions) {
+      const ratio = analysis.transactions.buys24h / (analysis.transactions.sells24h || 1);
+      if (ratio > 1.5) signals.push('💫 **Strong Buying Pressure** 🌊');
+      else if (ratio < 0.67) signals.push('⚠️ **Heavy Selling Detected** 📉');
+    }
+
+    // Price differential analysis
+    if (analysis.priceDifferential && analysis.priceDifferential.spreadPercent > 1) {
+      signals.push(`💹 **${analysis.priceDifferential.spreadPercent.toFixed(2)}% Arbitrage** between \`${analysis.priceDifferential.maxDex}\` and \`${analysis.priceDifferential.minDex}\` 💰`);
+    }
+
+    return signals.length > 0 ? signals : ['📊 *Neutral market activity* ⚖️'];
   } catch (error) {
     console.error('Error in market sentiment analysis:', error);
     return ['📊 *Unable to analyze market sentiment* ⚠️'];
   }
 }
 
-export function validateTokenAddress(address: string): boolean {
+function validateTokenAddress(address: string): boolean {
   const evmPattern = /^0x[a-fA-F0-9]{40}$/;
   const solanaPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
   return evmPattern.test(address) || solanaPattern.test(address);
 }
 
-// Explicitly export createTokenEmbed for use in other files
 export function createTokenEmbed(analysis: any, tokenContract: string, chain: string): EmbedBuilder {
   const sentiment = analyzeMarketSentiment(analysis);
   const chainEmoji = getChainEmoji(chain);
@@ -95,44 +112,6 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
     chart: `https://dexscreener.com/${chain}/${tokenContract}`,
     imageLens: `https://lens.google.com/uploadbyurl?url=${encodeURIComponent(analysis.logo)}`
   };
-
-  // Format holders in a single line
-  const holdersLine = analysis.holders ? 
-    analysis.holders.slice(0, 5)
-      .map((holder: any, index: number) => `${['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][index]} ${holder.percentage}%`)
-      .join(' • ') :
-    '*Holder data not available* ⚠️';
-
-  // Generate trading links with replaced contract address
-  const tradingLinks = [
-    `[MAE](https://t.me/MaestroSniperBot?start=${tokenContract}-rickburpbot)`,
-    `[BAN](https://t.me/BananaGun_bot?start=snp_rickburpbot_${tokenContract})`,
-    `[BNK](https://t.me/mcqueen_bonkbot?start=ref_rickbot_ca_${tokenContract})`,
-    `[SHU](https://t.me/ShurikenTradeBot?start=qt-RickSanchez-${tokenContract})`,
-    `[PEP](https://t.me/pepeboost_sol_bot?start=ref_0xRick_ca_${tokenContract})`,
-    `[MVX](https://mevx.io/solana/${tokenContract}?ref=RickBot)`,
-    `[BLO](https://t.me/BloomSolanaEU2_bot?start=ref_RickBot_ca_${tokenContract})`
-  ];
-
-  const tradingLinks2 = [
-    `[TRO](https://t.me/paris_trojanbot?start=d-RickBot-${tokenContract})`,
-    `[STB](https://t.me/SolTradingBot?start=${tokenContract}-yqC7cGy1T)`,
-    `[PHO](https://photon-sol.tinyastro.io/en/lp/JBJ9sq8Kt6V7ikeNE8dPXFCtMb9wPY3y4VzFXG1JAHQW)`,
-    `[NEO](https://neo.bullx.io/login?redirectUrl=terminal%3FchainId%3D1399811149%26address%3D${tokenContract})`,
-    `[GMG](https://gmgn.ai/sol/token/LbosYDck_${tokenContract})`,
-    `[EXP](https://solscan.io/token/${tokenContract})`,
-    `[TW](https://x.com/search?q=${tokenContract})`
-  ];
-
-  const tradingLinks3 = [
-    `[PRO](https://t.me/MaestroProBot?start=${tokenContract}-rickburpbot)`,
-    `[AXI](https://ape.pro/solana/${tokenContract}?ref=RPXHyi9dQHMl)`,
-    `[APE](https://bullx.io/terminal?chainId=1399811149&address=${tokenContract})`,
-    `[BLX](https://trade.padre.gg/sign-in?backToUrl=%2Ftrade%2Fsolana%2F${tokenContract})`,
-    `[PDR](https://trade.padre.gg/sign-in?backToUrl=%2Ftrade%2Fsolana%2F${tokenContract})`,
-    `[NOV](https://t.me/TradeonNovaBot?start=r-rick-${tokenContract})`,
-    `[CAL](https://t.me/CallAnalyserBot?start=${tokenContract})`
-  ];
 
   return new EmbedBuilder()
     .setColor(embedColor)
@@ -171,7 +150,11 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
       },
       {
         name: '👥 __Top Holders__',
-        value: holdersLine,
+        value: analysis.holders ? 
+          analysis.holders.slice(0, 5).map((holder: any, index: number) => 
+            `${['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][index]} \`${holder.address.slice(0, 6)}...${holder.address.slice(-4)}\`: ${holder.percentage}%`
+          ).join('\n') :
+          '*Holder data not available* ⚠️',
         inline: false
       },
       {
@@ -195,15 +178,6 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
         inline: false
       },
       {
-        name: '🚀 __TRADE NOW__',
-        value: [
-          tradingLinks.join('⋅'),
-          tradingLinks2.join('⋅'),
-          tradingLinks3.join('⋅')
-        ].join('\n'),
-        inline: false
-      },
-      {
         name: '🔗 __Links__',
         value: [
           `[Twitter](${socialLinks.twitter}) | [Website](${socialLinks.website})`,
@@ -223,6 +197,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   try {
     const tokenContract = interaction.options.getString('token', true);
+    console.log(`Analyzing token contract: ${tokenContract}`);
 
     if (!validateTokenAddress(tokenContract)) {
       await interaction.editReply('❌ Invalid token address format. Please verify the contract address.');
