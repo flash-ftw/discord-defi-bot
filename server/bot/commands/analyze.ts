@@ -58,9 +58,11 @@ function analyzeMarketSentiment(analysis: any): string[] {
   try {
     // Price momentum
     if (analysis.priceChange1h > 0 && analysis.priceChange24h > 0) {
-      signals.push('🚀 **Strong Bullish Momentum** 💫');
+      signals.push('mfs buying the whole supply 🚀🌙');
     } else if (analysis.priceChange1h < 0 && analysis.priceChange24h < 0) {
-      signals.push('🐻 **Bearish Pressure** ⚠️');
+      signals.push('mfs selling everything 📉💀');
+    } else {
+      signals.push('mfs sleeping now 😴💤');
     }
 
     // Volume analysis
@@ -78,12 +80,7 @@ function analyzeMarketSentiment(analysis: any): string[] {
       else if (ratio < 0.67) signals.push('⚠️ **Heavy Selling Detected** 📉');
     }
 
-    // Price differential analysis
-    if (analysis.priceDifferential && analysis.priceDifferential.spreadPercent > 1) {
-      signals.push(`💹 **${analysis.priceDifferential.spreadPercent.toFixed(2)}% Arbitrage** between \`${analysis.priceDifferential.maxDex}\` and \`${analysis.priceDifferential.minDex}\` 💰`);
-    }
-
-    return signals.length > 0 ? signals : ['📊 *Neutral market activity* ⚖️'];
+    return signals.length > 0 ? signals : ['mfs sleeping now 😴💤'];
   } catch (error) {
     console.error('Error in market sentiment analysis:', error);
     return ['📊 *Unable to analyze market sentiment* ⚠️'];
