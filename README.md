@@ -93,11 +93,9 @@ npm run dev
 
 ## Deployment Guide 🚀
 
-### GitHub Actions Deployment 🚀
+### Railway Deployment 🚀
 
-### First Time Setup
-
-1. Create your GitHub repository:
+1. Push your code to GitHub:
    ```bash
    git init
    git add .
@@ -107,18 +105,23 @@ npm run dev
    git push -u origin main
    ```
 
-2. Configure GitHub Secrets:
-   - Go to repository Settings > Secrets and Variables > Actions
-   - Add new repository secrets:
+2. Deploy to Railway:
+   - Create an account on [Railway](https://railway.app/)
+   - Create a new project and select "Deploy from GitHub repo"
+   - Connect your GitHub repository
+   - Add environment variables in Railway dashboard:
      ```
-     DISCORD_TOKEN = your_new_bot_token
+     DISCORD_TOKEN = your_discord_bot_token
      GUILD_ID = your_discord_server_id
+     DATABASE_URL = automatically provided by Railway if you add PostgreSQL
      ```
+   - Add a PostgreSQL database from the Railway dashboard
+   - Deploy your application
 
-3. Enable GitHub Actions:
-   - Go to Actions tab
-   - Enable workflows
-   - Actions will run on push to main branch
+3. Monitor your deployment:
+   - Railway provides logs and metrics
+   - Your bot will be online 24/7
+   - Set up alerts for any issues
 
 ### Security Best Practices 🔒
 
