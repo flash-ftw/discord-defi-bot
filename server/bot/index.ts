@@ -1,5 +1,9 @@
 import { Client, Events, GatewayIntentBits } from "discord.js";
 import { setupCommands } from "./commands";
+import * as dotenv from 'dotenv';
+
+// Ensure environment variables are loaded
+dotenv.config();
 
 export async function setupBot() {
   const client = new Client({ 
