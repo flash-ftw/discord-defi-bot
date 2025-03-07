@@ -32,65 +32,40 @@ export async function setupCommands(client: Client) {
     try {
       await command.execute(interaction);
     } catch (error) {
-      console.error('Error executing command:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Command execution error:', error instanceof Error ? error.message : 'Unknown error');
+      const errorMessage = 'There was an error executing this command.';
 
       if (interaction.replied || interaction.deferred) {
-        await interaction.followUp({ 
-          content: `There was an error executing this command: ${errorMessage}`, 
-          ephemeral: true 
-        });
+        await interaction.followUp({ content: errorMessage, ephemeral: true });
       } else {
-        await interaction.reply({ 
-          content: `There was an error executing this command: ${errorMessage}`, 
-          ephemeral: true 
-        });
+        await interaction.reply({ content: errorMessage, ephemeral: true });
       }
     }
   });
 
   // Add message event listener for contract detection
   client.on(Events.MessageCreate, async message => {
-    // Ignore bot messages and commands
     if (message.author.bot || message.content.startsWith('/')) return;
 
     try {
-      // Look for EVM and Solana contract addresses
       const evmContracts = message.content.match(CONTRACT_PATTERNS.evm) || [];
       const solanaContracts = message.content.match(CONTRACT_PATTERNS.solana) || [];
       const contracts = [...evmContracts, ...solanaContracts];
 
-      // Process first found contract address
       if (contracts.length > 0) {
         const contract = contracts[0];
-        console.log(`Detected contract address in message: ${contract}`);
-
-        // Detect chain and get analysis
         const chain = await detectChain(contract);
         if (!chain) return;
 
-        console.log(`Found response for chain ${chain}`);
         const analysis = await getTokenAnalysis(contract, chain);
         if (!analysis) return;
 
-        console.log('[TOKEN] Analysis result:', {
-          name: analysis.name,
-          symbol: analysis.symbol,
-          price: analysis.priceUsd
-        });
-
-        // Create embed response using the imported function
         const embed = analyzeCommand.createTokenEmbed(analysis, contract, chain);
-
-        // Reply with analysis
         await message.reply({ embeds: [embed] });
       }
     } catch (error) {
-      console.error('Error processing message for contracts:', error);
-      if (error instanceof Error) {
-        console.error('Error details:', error.message);
-        console.error('Stack trace:', error.stack);
-      }
+      // Silent fail for message processing errors
+      console.error('Message processing error:', error instanceof Error ? error.message : 'Unknown error');
     }
   });
 
@@ -103,20 +78,13 @@ export async function setupCommands(client: Client) {
         return;
       }
 
-      console.log(`Registering commands for guild: ${guild.name} (${GUILD_ID})`);
-      console.log('Commands to register:', commands.map(cmd => cmd.data.name));
-
       const registeredCommands = await guild.commands.set(commands.map(cmd => cmd.data));
       console.log('Successfully registered commands:', registeredCommands.map(cmd => cmd.name));
 
       // Start price tracking
       startPriceTracking(client);
     } catch (error) {
-      console.error('Error registering application commands:', error);
-      if (error instanceof Error) {
-        console.error('Error details:', error.message);
-        console.error('Stack trace:', error.stack);
-      }
+      console.error('Bot initialization error:', error instanceof Error ? error.message : 'Unknown error');
     }
   });
 }

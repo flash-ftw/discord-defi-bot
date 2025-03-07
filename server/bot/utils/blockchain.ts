@@ -4,7 +4,7 @@ import { getTokenAnalysis } from "./dexscreener";
 const chainMapping: Record<string, Chain> = {
   'ethereum': 'ethereum',
   'eth': 'ethereum',
-  'pulse': null as unknown as Chain, // Ignore PulseChain
+  'pulse': null as unknown as Chain,
   'base': 'base',
   'avalanche': 'avalanche',
   'avax': 'avalanche',
@@ -14,33 +14,20 @@ const chainMapping: Record<string, Chain> = {
 
 export async function detectChain(tokenContract: string): Promise<Chain | null> {
   try {
-    console.log(`Attempting to detect chain for token: ${tokenContract}`);
-
-    // Try each chain sequentially until we find a match
     for (const chain of ['ethereum', 'base', 'avalanche', 'solana'] as Chain[]) {
-      console.log(`Checking ${chain}...`);
       const response = await getTokenAnalysis(tokenContract, chain);
       if (response) {
         const chainId = response.chainId.toLowerCase();
-        console.log(`Found response for chain ${chainId}`);
-
         for (const [key, value] of Object.entries(chainMapping)) {
           if (chainId.includes(key)) {
-            if (value === null) {
-              console.log(`Skipping unsupported chain: ${chainId}`);
-              continue;
-            }
-            console.log(`Detected chain: ${value}`);
+            if (value === null) continue;
             return value;
           }
         }
       }
     }
-
-    console.log('No matching chain found for token');
     return null;
   } catch (error) {
-    console.error("Error detecting chain:", error);
     return null;
   }
 }

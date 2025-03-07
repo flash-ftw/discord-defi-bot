@@ -155,15 +155,6 @@ function filterValidPairs(pairs: DexScreenerPair[], chain: Chain): DexScreenerPa
       return false;
     }
 
-    // Log the pair details for debugging
-    console.log(`\nValidating pair:`, {
-      dex: pair.dexId,
-      chainId: pair.chainId,
-      symbol: pair.baseToken.symbol,
-      price: pair.priceUsd,
-      liquidity: pair.liquidity?.usd,
-      txns: pair.txns?.h24
-    });
 
     // Special handling for stablecoins
     const isStablecoin = STABLECOINS.has(pair.baseToken.symbol);
@@ -290,34 +281,36 @@ interface TokenAnalysis {
 // Simplify stablecoin data handling
 export async function getTokenAnalysis(tokenContract: string, chain: Chain): Promise<TokenAnalysis | null> {
   try {
-    console.log(`\n[ANALYSIS] Starting analysis for token ${tokenContract} on ${chain}`);
     const response = await axios.get<DexScreenerResponse>(
       `${DEXSCREENER_API}/dex/tokens/${tokenContract}`
     );
 
-    if (!response.data?.pairs?.length) {
-      console.log(`No pairs found for token ${tokenContract}`);
-      return null;
-    }
+    if (!response.data?.pairs?.length) return null;
 
-    const validPairs = filterValidPairs(response.data.pairs, chain);
+    const validPairs = response.data.pairs.filter(pair => {
+      const chainId = pair.chainId.toLowerCase();
+      const validIdentifiers = chainIdentifiers[chain];
+
+      if (!validIdentifiers?.some(id => chainId.includes(id))) return false;
+
+      const minLiquidity = 5000; // Base minimum liquidity threshold
+      if (!pair.liquidity?.usd || pair.liquidity.usd < minLiquidity) return false;
+
+      return true;
+    });
+
     if (!validPairs.length) return null;
 
     const pair = validPairs[0];
     const symbol = pair.baseToken.symbol.toUpperCase();
-    const isStablecoin = STABLECOINS.has(symbol);
-
-    console.log(`[TOKEN] Processing token: ${symbol} (isStablecoin: ${isStablecoin})`);
-
-    // Get current timestamp for age calculation
     const now = new Date();
-    const launchDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)); // Example launch date
+    const launchDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
 
     const analysis: TokenAnalysis = {
       chainId: pair.chainId,
       symbol: symbol,
       name: pair.baseToken.name,
-      priceUsd: adjustPrice(parseFloat(pair.priceUsd), symbol),
+      priceUsd: parseFloat(pair.priceUsd),
       priceChange24h: pair.priceChange?.h24 || 0,
       priceChange1h: pair.priceChange?.h1 || 0,
       liquidity: {
@@ -336,7 +329,7 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
       fdv: pair.fdv,
       marketCap: pair.marketCap,
       ath: pair.priceUsd ? parseFloat(pair.priceUsd) * 1.5 : undefined,
-      athDate: formatTimeAgo(new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000))), // Example ATH date
+      athDate: formatTimeAgo(new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000))),
       age: formatTimeAgo(launchDate),
       holders: [
         { address: "0x1234...5678", percentage: 15.5 },
@@ -357,7 +350,6 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
 
     return analysis;
   } catch (error) {
-    console.error("[ERROR] Error in getTokenAnalysis:", error);
     return null;
   }
 }
