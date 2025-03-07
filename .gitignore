@@ -6,7 +6,8 @@ dist/
 # Environment
 .env
 .env.local
-.env.*.local
+.env.*
+!.env.example
 
 # OS
 .DS_Store
@@ -23,6 +24,15 @@ build/
 dist/
 out/
 
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Package files
+package-lock.json
+*.tar.gz
+
 # Replit specific
 .config/
 .upm/
@@ -32,12 +42,3 @@ out/
 .replit
 replit.nix
 .gitattributes
-
-# Debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Package files
-package-lock.json
-*.tar.gz
