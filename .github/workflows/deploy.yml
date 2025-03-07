@@ -6,20 +6,59 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  security_checks:
     runs-on: ubuntu-latest
-    
     steps:
     - uses: actions/checkout@v3
-    
+
+    - name: Security Scan
+      uses: github/codeql-action/init@v2
+      with:
+        languages: javascript
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+
+  deploy:
+    needs: security_checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '20'
-        
+        cache: 'npm'
+
     - name: Install Dependencies
-      run: npm install
-      
+      run: npm ci
+
+    - name: Verify Discord Token Format
+      run: |
+        if [[ ! ${{ secrets.DISCORD_TOKEN }} =~ ^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$ ]]; then
+          echo "Invalid Discord token format"
+          exit 1
+        fi
+      shell: bash
+
+    - name: Verify Guild ID Format
+      run: |
+        if [[ ! ${{ secrets.GUILD_ID }} =~ ^[0-9]{17,19}$ ]]; then
+          echo "Invalid Guild ID format"
+          exit 1
+        fi
+      shell: bash
+
+    - name: Cache node_modules
+      uses: actions/cache@v3
+      with:
+        path: node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
     - name: Run Bot
       env:
         DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}

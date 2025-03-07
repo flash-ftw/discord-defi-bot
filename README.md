@@ -15,7 +15,14 @@ For secure deployment, follow these steps:
 
 # Discord DeFi Analytics Bot 🤖
 
-A sophisticated Discord bot for real-time cryptocurrency analytics, offering comprehensive token insights with dynamic, user-friendly interfaces and instant market intelligence.
+A powerful Discord bot for comprehensive cryptocurrency analytics, providing real-time, in-depth token insights with advanced features for crypto enthusiasts and traders.
+
+Key components:
+- Multi-chain token analysis with detailed metrics
+- Advanced Discord embed formatting
+- Real-time market data visualization
+- Automated contract and token intelligence
+- Enhanced token information extraction and presentation
 
 ## Features 🌟
 
@@ -86,49 +93,51 @@ npm run dev
 
 ## Deployment Guide 🚀
 
-### GitHub Deployment
-1. Fork this repository to your GitHub account
+### GitHub Actions Deployment 🚀
 
-2. Set up GitHub Secrets:
-   - Go to your repository Settings > Secrets and Variables > Actions
-   - Add a new repository secret named `DISCORD_TOKEN`
-   - Add your Discord bot token as the value
+### First Time Setup
 
-3. Update Discord Bot Settings:
-   - Go to [Discord Developer Portal](https://discord.com/developers/applications)
-   - Select your application
-   - Under "Bot" settings:
-     - Enable "Message Content Intent"
-     - Enable "Server Members Intent"
-     - Enable "Presence Intent"
-
-4. Configure Environment:
-   The bot needs these environment variables:
-   ```env
-   DISCORD_TOKEN=your_discord_bot_token
-   GUILD_ID=your_discord_server_id
+1. Create your GitHub repository:
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git branch -M main
+   git remote add origin your-repo-url
+   git push -u origin main
    ```
 
-5. Deploy:
-   - For GitHub hosting, use GitHub Secrets
-   - For local development, use a `.env` file (do not commit this file)
-
-
-### GitHub Actions Deployment
-
-1. Fork this repository to your GitHub account
-
-2. Set up GitHub Secrets:
-   - Go to your repository Settings > Secrets and Variables > Actions
-   - Add these repository secrets:
-     - `DISCORD_TOKEN`: Your Discord bot token
-     - `GUILD_ID`: Your Discord server ID
+2. Configure GitHub Secrets:
+   - Go to repository Settings > Secrets and Variables > Actions
+   - Add new repository secrets:
+     ```
+     DISCORD_TOKEN = your_new_bot_token
+     GUILD_ID = your_discord_server_id
+     ```
 
 3. Enable GitHub Actions:
-   - Go to the Actions tab in your repository
-   - Enable workflows if they're not already enabled
-   - The deployment workflow will run automatically on pushes to main
-   - You can also manually trigger deployments from the Actions tab
+   - Go to Actions tab
+   - Enable workflows
+   - Actions will run on push to main branch
+
+### Security Best Practices 🔒
+
+1. Token Security:
+   - Never commit tokens to Git
+   - Use GitHub Secrets for sensitive data
+   - Reset tokens if exposed
+   - Use environment variables
+
+2. Repository Security:
+   - Enable branch protection
+   - Require pull request reviews
+   - Enable vulnerability alerts
+
+3. Monitoring:
+   - Check Actions tab for deployment status
+   - Monitor bot logs for suspicious activity
+   - Regularly audit access tokens
+
 
 ### Local Development
 1. Create a `.env` file:
