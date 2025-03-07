@@ -30,6 +30,9 @@ app.get('/', (req, res) => {
 });
 
 (async () => {
+  // Debug: Check if environment variables are loaded
+  console.log("DISCORD_TOKEN available:", !!process.env.DISCORD_TOKEN);
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
