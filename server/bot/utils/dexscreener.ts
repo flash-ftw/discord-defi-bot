@@ -9,6 +9,26 @@ const cache = new NodeCache({ stdTTL: 300 }); // 5 minutes cache
 cache.flushAll();
 console.log('DexScreener cache cleared');
 
+function formatTimeAgo(timestamp: string | Date): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+  return `${Math.floor(diffInSeconds / 86400)} days ago`;
+}
+
+function getDexScreenerLogoUrl(tokenContract: string, chain: string): string {
+  return `https://dd.dexscreener.com/ds-data/tokens/${chain}/${tokenContract}.png?key=90f47d?size=lg`;
+}
+
+function getGoogleLensUrl(tokenContract: string, chain: string): string {
+  const logoUrl = getDexScreenerLogoUrl(tokenContract, chain);
+  return `https://lens.google.com/uploadbyurl?url=${encodeURIComponent(logoUrl)}`;
+}
+
 // Update PRICE_RANGES to include more accurate USDT range
 const PRICE_RANGES = {
   'WETH': { min: 2000, max: 3000 },
@@ -73,21 +93,6 @@ const chainIdentifiers: Record<Chain, string[]> = {
   'avalanche': ['avalanche', 'avax'],
   'solana': ['solana', 'sol']
 };
-
-function formatTimeAgo(timestamp: string | Date): string {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
-  return `${Math.floor(diffInSeconds / 86400)} days ago`;
-}
-
-function getDexScreenerLogoUrl(tokenContract: string, chain: string): string {
-  return `https://dd.dexscreener.com/ds-data/tokens/${chain}/${tokenContract}.png?key=90f47d?size=lg`;
-}
 
 function adjustPrice(price: number, symbol: string): number {
   if (STABLECOINS.has(symbol)) {
@@ -285,6 +290,8 @@ interface TokenAnalysis {
     minDex: string;
     spreadPercent: number;
   };
+  dexscreenerUrl?: string;
+  googleLensUrl?: string;
 }
 
 // Simplify stablecoin data handling
@@ -305,9 +312,6 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
 
     const pair = validPairs[0];
     const symbol = pair.baseToken.symbol.toUpperCase();
-    const isStablecoin = STABLECOINS.has(symbol);
-
-    console.log(`[TOKEN] Processing token: ${symbol} (isStablecoin: ${isStablecoin})`);
 
     // Get current timestamp for age calculation
     const now = new Date();
@@ -352,7 +356,9 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
       website: "https://example.com",
       twitter: "https://twitter.com/example",
       logo: getDexScreenerLogoUrl(tokenContract, chain),
-      priceDifferential: pair.priceDifferential
+      priceDifferential: pair.priceDifferential,
+      dexscreenerUrl: `https://dexscreener.com/${chain}/${tokenContract}`,
+      googleLensUrl: getGoogleLensUrl(tokenContract, chain)
     };
 
     return analysis;

@@ -106,13 +106,6 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
     mintable: analysis.securityStatus?.mintable || false 
   };
 
-  const socialLinks = {
-    twitter: analysis.twitter || `https://twitter.com/search?q=${analysis.name}`,
-    website: analysis.website || 'N/A',
-    chart: `https://dexscreener.com/${chain}/${tokenContract}`,
-    imageLens: `https://lens.google.com/uploadbyurl?url=${encodeURIComponent(analysis.logo)}`
-  };
-
   return new EmbedBuilder()
     .setColor(embedColor)
     .setTitle(`${chainEmoji} ${analysis.name} (${analysis.symbol})`)
@@ -180,8 +173,8 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
       {
         name: '🔗 __Links__',
         value: [
-          `[Twitter](${socialLinks.twitter}) | [Website](${socialLinks.website})`,
-          `[Chart](${socialLinks.chart}) | [Image Search](${socialLinks.imageLens})`
+          `[Twitter](${analysis.twitter}) | [Website](${analysis.website})`,
+          `[Chart](${analysis.dexscreenerUrl}) | [Search Similar](${analysis.googleLensUrl})`
         ].join('\n'),
         inline: false
       }
