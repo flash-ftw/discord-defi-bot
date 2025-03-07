@@ -15,10 +15,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         value: [
           '**Real-time token analysis across supported chains:**',
           '• 💰 Current price and market metrics',
-          '• 📈 24h/1h price changes with trend indicators',
-          '• 💧 Liquidity analysis and volume tracking',
-          '• 🔄 Trading activity monitoring',
-          '• 🎯 Smart market sentiment analysis',
+          '• 📈 24h/1h price changes with sentiment',
+          '• 💧 Liquidity analysis and security checks',
+          '• 👥 Top holders and trading activity',
           '',
           '**Example:** `/analyze 0xdac17f958d2ee523a2206206994597c13d831ec7`'
         ].join('\n'),
@@ -38,14 +37,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         inline: false
       },
       {
-        name: '📈 /status',
+        name: '📈 /market',
         value: [
-          '**Live market price tracking:**',
-          '• ⟠ ETH price and 24h change',
-          '• ◎ SOL price and 24h change',
-          '• 🕒 Real-time updates',
+          '**Live market overview:**',
+          '• 🔥 Top 5 trending tokens',
+          '• 📊 Volume leaders (24h/1h/10min)',
+          '• 🎯 Real-time price tracking',
           '',
-          '*Prices auto-update every minute*'
+          '*Data auto-updates every minute*'
         ].join('\n'),
         inline: false
       },

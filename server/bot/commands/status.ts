@@ -69,7 +69,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       .setColor(0x5865F2) // Discord blurple color
       .setTitle('🎯 __Market Overview__')
       .setDescription('**Real-time cryptocurrency market analysis** 📊')
-      .setThumbnail('attachment://TBD_logo-removebg-preview.png')
       .addFields(
         {
           name: '🔥 __Trending Tokens__',
@@ -77,18 +76,17 @@ export async function execute(interaction: ChatInputCommandInteraction) {
           inline: false
         },
         {
-          name: '📊 __24h Volume Leaders__',
-          value: volumeLeaders.h24.join('\n'),
-          inline: true
-        },
-        {
-          name: '⚡ __1h Volume Leaders__',
-          value: volumeLeaders.h1.join('\n'),
-          inline: true
-        },
-        {
-          name: '🔄 __10min Volume Leaders__',
-          value: volumeLeaders.m10.join('\n'),
+          name: '📊 __Volume Leaders__',
+          value: [
+            '**24h Top:**',
+            volumeLeaders.h24.join('\n'),
+            '',
+            '**1h Top:**',
+            volumeLeaders.h1.join('\n'),
+            '',
+            '**10min Top:**',
+            volumeLeaders.m10.join('\n')
+          ].join('\n'),
           inline: false
         }
       )
@@ -97,13 +95,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         text: `Powered by chefs for the cooks 👨‍🍳` 
       });
 
-    await interaction.editReply({ 
-      embeds: [embed],
-      files: [{
-        attachment: './attached_assets/TBD_logo-removebg-preview.png',
-        name: 'TBD_logo-removebg-preview.png'
-      }]
-    });
+    await interaction.editReply({ embeds: [embed] });
   } catch (error) {
     console.error('Error in market command:', error);
     await interaction.editReply('❌ An error occurred while fetching market data.');

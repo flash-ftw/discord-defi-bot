@@ -106,6 +106,13 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
     mintable: analysis.securityStatus?.mintable || false 
   };
 
+  // Format holders info more compactly
+  const holdersInfo = analysis.holders ? 
+    analysis.holders.slice(0, 5).map((holder: any, index: number) => 
+      `${['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][index]} \`${holder.percentage}%\``
+    ).join(' | ') :
+    '*Holder data not available* ⚠️';
+
   return new EmbedBuilder()
     .setColor(embedColor)
     .setTitle(`${chainEmoji} ${analysis.name} (${analysis.symbol})`)
@@ -142,12 +149,8 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
         inline: true
       },
       {
-        name: '👥 __Top Holders__',
-        value: analysis.holders ? 
-          analysis.holders.slice(0, 5).map((holder: any, index: number) => 
-            `${['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][index]} \`${holder.address.slice(0, 6)}...${holder.address.slice(-4)}\`: ${holder.percentage}%`
-          ).join('\n') :
-          '*Holder data not available* ⚠️',
+        name: '👥 __Top Holders Distribution__',
+        value: holdersInfo,
         inline: false
       },
       {
@@ -155,7 +158,7 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
         value: [
           `${securityStatus.liquidityLocked ? '🔒' : '🔓'} **Liquidity:** ${securityStatus.liquidityLocked ? 'Locked' : 'Unlocked'}`,
           `${securityStatus.mintable ? '⚠️' : '✅'} **Mint Function:** ${securityStatus.mintable ? 'Active' : 'None'}`
-        ].join('\n'),
+        ].join(' | '),
         inline: false
       },
       {
@@ -173,8 +176,7 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
       {
         name: '🔗 __Links__',
         value: [
-          `[Twitter](${analysis.twitter}) | [Website](${analysis.website})`,
-          `[Chart](${analysis.dexscreenerUrl}) | [Search Similar](${analysis.googleLensUrl})`
+          `[Twitter](${analysis.twitter}) | [Chart](${analysis.dexscreenerUrl}) | [Search Similar](${analysis.googleLensUrl})`
         ].join('\n'),
         inline: false
       }
