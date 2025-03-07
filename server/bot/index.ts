@@ -22,7 +22,19 @@ export async function setupBot() {
   await setupCommands(client);
 
   // Login with token
-  await client.login(process.env.DISCORD_TOKEN);
+  const token = process.env.DISCORD_TOKEN;
+  console.log("Token exists:", !!token);
+  console.log("Token length:", token?.length);
+  console.log("Token first 5 chars:", token?.substring(0, 5));
+  console.log("Token last 5 chars:", token?.substring(token.length - 5));
+  
+  try {
+    await client.login(token);
+  } catch (error) {
+    console.error("Login error:", error);
+    console.error("Please check your Discord token - it appears to be invalid");
+    console.error("Get a new token from the Discord Developer Portal");
+  }
 
   return client;
 }
