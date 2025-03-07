@@ -1,5 +1,9 @@
 import express from "express";
 import { registerRoutes } from "./routes";
+import dotenv from "dotenv";
+
+// Load environment variables from .env file
+dotenv.config();
 
 // Simple logging function
 function log(message: string) {
@@ -32,6 +36,9 @@ app.get('/', (req, res) => {
 (async () => {
   // Debug: Check if environment variables are loaded
   console.log("DISCORD_TOKEN available:", !!process.env.DISCORD_TOKEN);
+  console.log("Environment variables found:", Object.keys(process.env).filter(key => 
+    key === 'DISCORD_TOKEN' || key === 'GUILD_ID').length > 0 ? 'Yes' : 'No');
+  console.log("NODE_ENV:", process.env.NODE_ENV);
   
   const server = await registerRoutes(app);
 
