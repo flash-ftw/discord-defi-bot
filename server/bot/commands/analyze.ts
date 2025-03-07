@@ -12,6 +12,7 @@ export const data = new SlashCommandBuilder()
       .setRequired(true)
   );
 
+// Helper functions...
 function formatPercentage(value: number): string {
   const sign = value >= 0 ? '🚀' : '🔻';
   const color = value >= 0 ? '💚' : '❤️';
@@ -56,7 +57,6 @@ function analyzeMarketSentiment(analysis: any): string[] {
   const signals = [];
 
   try {
-    // Price momentum
     if (analysis.priceChange1h > 0 && analysis.priceChange24h > 0) {
       signals.push('mfs buying the whole supply 🚀🌙');
     } else if (analysis.priceChange1h < 0 && analysis.priceChange24h < 0) {
@@ -65,22 +65,7 @@ function analyzeMarketSentiment(analysis: any): string[] {
       signals.push('mfs sleeping now 😴💤');
     }
 
-    // Volume analysis
-    if (analysis.volume?.h24 > 0) {
-      const hourlyVolume = (analysis.volume.h24 / 24);
-      if (analysis.volume?.h1 > hourlyVolume * 1.5) {
-        signals.push('📊 **High Volume Alert** 🔥');
-      }
-    }
-
-    // Buy/Sell ratio analysis
-    if (analysis.transactions) {
-      const ratio = analysis.transactions.buys24h / (analysis.transactions.sells24h || 1);
-      if (ratio > 1.5) signals.push('💫 **Strong Buying Pressure** 🌊');
-      else if (ratio < 0.67) signals.push('⚠️ **Heavy Selling Detected** 📉');
-    }
-
-    return signals.length > 0 ? signals : ['mfs sleeping now 😴💤'];
+    return signals;
   } catch (error) {
     console.error('Error in market sentiment analysis:', error);
     return ['📊 *Unable to analyze market sentiment* ⚠️'];
@@ -93,6 +78,7 @@ function validateTokenAddress(address: string): boolean {
   return evmPattern.test(address) || solanaPattern.test(address);
 }
 
+// Explicitly export the createTokenEmbed function
 export function createTokenEmbed(analysis: any, tokenContract: string, chain: string): EmbedBuilder {
   const sentiment = analyzeMarketSentiment(analysis);
   const chainEmoji = getChainEmoji(chain);
@@ -125,14 +111,20 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
     `[SHU](https://t.me/ShurikenTradeBot?start=qt-RickSanchez-${tokenContract})`,
     `[PEP](https://t.me/pepeboost_sol_bot?start=ref_0xRick_ca_${tokenContract})`,
     `[MVX](https://mevx.io/solana/${tokenContract}?ref=RickBot)`,
-    `[BLO](https://t.me/BloomSolanaEU2_bot?start=ref_RickBot_ca_${tokenContract})`,
+    `[BLO](https://t.me/BloomSolanaEU2_bot?start=ref_RickBot_ca_${tokenContract})`
+  ];
+
+  const tradingLinks2 = [
     `[TRO](https://t.me/paris_trojanbot?start=d-RickBot-${tokenContract})`,
     `[STB](https://t.me/SolTradingBot?start=${tokenContract}-yqC7cGy1T)`,
     `[PHO](https://photon-sol.tinyastro.io/en/lp/JBJ9sq8Kt6V7ikeNE8dPXFCtMb9wPY3y4VzFXG1JAHQW)`,
     `[NEO](https://neo.bullx.io/login?redirectUrl=terminal%3FchainId%3D1399811149%26address%3D${tokenContract})`,
     `[GMG](https://gmgn.ai/sol/token/LbosYDck_${tokenContract})`,
     `[EXP](https://solscan.io/token/${tokenContract})`,
-    `[TW](https://x.com/search?q=${tokenContract})`,
+    `[TW](https://x.com/search?q=${tokenContract})`
+  ];
+
+  const tradingLinks3 = [
     `[PRO](https://t.me/MaestroProBot?start=${tokenContract}-rickburpbot)`,
     `[AXI](https://ape.pro/solana/${tokenContract}?ref=RPXHyi9dQHMl)`,
     `[APE](https://bullx.io/terminal?chainId=1399811149&address=${tokenContract})`,
@@ -140,13 +132,6 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
     `[PDR](https://trade.padre.gg/sign-in?backToUrl=%2Ftrade%2Fsolana%2F${tokenContract})`,
     `[NOV](https://t.me/TradeonNovaBot?start=r-rick-${tokenContract})`,
     `[CAL](https://t.me/CallAnalyserBot?start=${tokenContract})`
-  ];
-
-  // Split trading links into rows
-  const tradingRows = [
-    tradingLinks.slice(0, 7).join('⋅'),
-    tradingLinks.slice(7, 14).join('⋅'),
-    tradingLinks.slice(14).join('⋅')
   ];
 
   return new EmbedBuilder()
@@ -211,7 +196,11 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
       },
       {
         name: '🚀 __TRADE NOW__',
-        value: tradingRows.join('\n'),
+        value: [
+          tradingLinks.join('⋅'),
+          tradingLinks2.join('⋅'),
+          tradingLinks3.join('⋅')
+        ].join('\n'),
         inline: false
       },
       {
@@ -234,7 +223,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   try {
     const tokenContract = interaction.options.getString('token', true);
-    console.log(`Analyzing token contract: ${tokenContract}`);
 
     if (!validateTokenAddress(tokenContract)) {
       await interaction.editReply('❌ Invalid token address format. Please verify the contract address.');

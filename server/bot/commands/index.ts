@@ -69,10 +69,17 @@ export async function setupCommands(client: Client) {
         const chain = await detectChain(contract);
         if (!chain) return;
 
+        console.log(`Found response for chain ${chain}`);
         const analysis = await getTokenAnalysis(contract, chain);
         if (!analysis) return;
 
-        // Create embed response
+        console.log('[TOKEN] Analysis result:', {
+          name: analysis.name,
+          symbol: analysis.symbol,
+          price: analysis.priceUsd
+        });
+
+        // Create embed response using the imported function
         const embed = analyzeCommand.createTokenEmbed(analysis, contract, chain);
 
         // Reply with analysis
@@ -80,6 +87,10 @@ export async function setupCommands(client: Client) {
       }
     } catch (error) {
       console.error('Error processing message for contracts:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+        console.error('Stack trace:', error.stack);
+      }
     }
   });
 
