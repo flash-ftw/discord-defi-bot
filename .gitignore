@@ -42,3 +42,8 @@ package-lock.json
 .replit
 replit.nix
 .gitattributes
+
+# Production
+.vercel
+.next
+.env.production
