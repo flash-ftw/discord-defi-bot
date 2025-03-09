@@ -8,7 +8,7 @@ export const data = new SlashCommandBuilder()
   .addStringOption(option =>
     option
       .setName('token')
-      .setDescription('Token contract address to analyze (supports ETH, Base, Avalanche, Solana)')
+      .setDescription('Token contract address to analyze (e.g., USDT: 0xdac17f958d2ee523a2206206994597c13d831ec7)')
       .setRequired(true)
   );
 
@@ -96,16 +96,10 @@ function validateTokenAddress(address: string): boolean {
   return evmPattern.test(address) || solanaPattern.test(address);
 }
 
-function createTokenEmbed(analysis: any, tokenContract: string, chain: string): EmbedBuilder {
+export function createTokenEmbed(analysis: any, tokenContract: string, chain: string): EmbedBuilder {
   const sentiment = analyzeMarketSentiment(analysis);
   const chainEmoji = getChainEmoji(chain);
   const embedColor = getEmbedColor(analysis.priceChange24h);
-
-  // Safely handle age and ATH display
-  const tokenAge = analysis.age?.formattedAge || 'Unknown';
-  const athDisplay = analysis.ath 
-    ? `**ATH:** ${formatUSD(analysis.ath.price)}${analysis.ath.date ? ` (${analysis.ath.date})` : ''}`
-    : '**ATH:** `N/A`';
 
   const securityStatus = {
     liquidityLocked: analysis.securityStatus?.liquidityLocked || false, 
@@ -131,7 +125,7 @@ function createTokenEmbed(analysis: any, tokenContract: string, chain: string): 
           `**Current Price:** ${formatUSD(analysis.priceUsd)}`,
           `**24h Change:** ${formatPercentage(analysis.priceChange24h)}`,
           `**1h Change:** ${formatPercentage(analysis.priceChange1h)}`,
-          athDisplay
+          `**ATH:** ${formatUSD(analysis.ath)} (${analysis.athDate})`
         ].join('\n'),
         inline: false
       },
@@ -141,7 +135,7 @@ function createTokenEmbed(analysis: any, tokenContract: string, chain: string): 
           `**Market Cap:** ${formatUSD(analysis.marketCap)}`,
           analysis.fdv ? `**FDV:** ${formatUSD(analysis.fdv)}` : null,
           `**Volume (24h):** ${formatUSD(analysis.volume?.h24)}`,
-          `**Token Age:** ${tokenAge}`
+          `**Token Age:** ${analysis.age}`
         ].filter(Boolean).join('\n'),
         inline: true
       },
@@ -205,16 +199,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       return;
     }
 
-    // First detect chain
     const chain = await detectChain(tokenContract);
     if (!chain) {
       await interaction.editReply('❌ Token not found on any supported chain. Please verify the contract address is correct and the token exists on a supported chain (Ethereum, Base, Avalanche, or Solana).');
       return;
     }
 
-    console.log(`Detected chain: ${chain}`);
-
-    // Get token analysis
     const analysis = await getTokenAnalysis(tokenContract, chain);
     if (!analysis) {
       await interaction.editReply('❌ Failed to fetch token analysis. The token might not have enough liquidity or trading activity.');
