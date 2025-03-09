@@ -113,6 +113,33 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
     ).join(' | ') :
     '*Holder data not available* ⚠️';
 
+  // Format Telegram bot links in a compact view
+  const createTelegramLinks = (tokenAddress: string) => {
+    // All trading bots with shortened names
+    const allLinks = [
+      `[🤖 MaestroS](https://t.me/MaestroSniperBot?start=${tokenAddress}-rickburpbot)`,
+      `[🤖 BananaG](https://t.me/BananaGunBot?start=snprickburpbot${tokenAddress})`,
+      `[🤖 McQueen](https://t.me/mcqueenbonkbot?start=refrickbotca${tokenAddress})`,
+      `[🤖 Shuriken](https://t.me/ShurikenTradeBot?start=qt-RickSanchez-${tokenAddress})`,
+      `[🤖 PepeB](https://t.me/pepeboost_sol_bot?start=ref_0xRick_ca_${tokenAddress})`,
+      `[🤖 Bloom](https://t.me/BloomSolanaEU2_bot?start=ref_RickBot_ca_${tokenAddress})`,
+      `[🤖 Paris](https://t.me/paristrojanbot?start=d-RickBot-${tokenAddress})`,
+      `[🤖 SolT](https://t.me/SolTradingBot?start=${tokenAddress}-yqC7cGy1T)`,
+      `[🤖 MaestroP](https://t.me/MaestroProBot?start=${tokenAddress}-rickburpbot)`,
+      `[🤖 TradeonN](https://t.me/TradeonNovaBot?start=r-rick-${tokenAddress})`,
+      `[🌐 MEVX](https://mevx.io/solana/${tokenAddress}?ref=RickBot)`,
+      `[🌐 APE](https://ape.pro/solana/${tokenAddress}?ref=RPXHyi9dQHMl)`
+    ];
+    
+    // Return all links in a compact grid format - 4 per row
+    const rows = [];
+    for (let i = 0; i < allLinks.length; i += 4) {
+      rows.push(allLinks.slice(i, i + 4).join(' • '));
+    }
+    
+    return rows.join('\n');
+  };
+
   return new EmbedBuilder()
     .setColor(embedColor)
     .setTitle(`${chainEmoji} ${analysis.name} (${analysis.symbol})`)
@@ -176,8 +203,14 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
       {
         name: '🔗 __Links__',
         value: [
-          `[Twitter](${analysis.twitter}) | [Chart](${analysis.dexscreenerUrl}) | [Search Similar](${analysis.googleLensUrl})`
+          `[Twitter](${analysis.twitter}) | [Chart](${analysis.dexscreenerUrl}) | [Search Similar](${analysis.googleLensUrl})`,
+          `[🔍 Crawl tweets about this token](${analysis.twitter})`
         ].join('\n'),
+        inline: false
+      },
+      {
+        name: '🤖 __Trade With Bots__',
+        value: createTelegramLinks(tokenContract),
         inline: false
       }
     )
