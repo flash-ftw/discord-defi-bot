@@ -13,11 +13,19 @@ function formatTimeAgo(timestamp: string | Date): string {
   const date = new Date(timestamp);
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const diffInDays = Math.floor(diffInSeconds / 86400);
+  const diffInMonths = Math.floor(diffInDays / 30);
 
-  if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
-  return `${Math.floor(diffInSeconds / 86400)} days ago`;
+  if (diffInMonths > 0) {
+    return `${diffInMonths} month${diffInMonths > 1 ? 's' : ''} ago`;
+  }
+  if (diffInDays > 0) {
+    return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+  }
+  if (diffInSeconds < 3600) {
+    return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+  }
+  return `${Math.floor(diffInSeconds / 3600)} hours ago`;
 }
 
 function getDexScreenerLogoUrl(tokenContract: string, chain: string): string {
@@ -268,10 +276,14 @@ interface TokenAnalysis {
   };
   fdv?: number;
   marketCap?: number;
-  // New fields
-  ath?: number;
-  athDate?: string;
-  age?: string;
+  ath?: {
+    price: number;
+    date?: string;
+  };
+  age?: {
+    createdAt: string;
+    formattedAge: string;
+  };
   holders?: Array<{
     address: string;
     percentage: number;
@@ -294,7 +306,6 @@ interface TokenAnalysis {
   googleLensUrl?: string;
 }
 
-// Simplify stablecoin data handling
 export async function getTokenAnalysis(tokenContract: string, chain: Chain): Promise<TokenAnalysis | null> {
   try {
     console.log(`\n[ANALYSIS] Starting analysis for token ${tokenContract} on ${chain}`);
@@ -313,9 +324,17 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
     const pair = validPairs[0];
     const symbol = pair.baseToken.symbol.toUpperCase();
 
-    // Get current timestamp for age calculation
-    const now = new Date();
-    const launchDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)); // Example launch date
+    // Calculate token age using actual pair creation time
+    const age = pair.pairCreatedAt ? {
+      createdAt: pair.pairCreatedAt,
+      formattedAge: formatTimeAgo(new Date(pair.pairCreatedAt))
+    } : undefined;
+
+    // Calculate ATH using actual price max data
+    const ath = pair.priceMax ? {
+      price: parseFloat(pair.priceMax),
+      date: pair.priceMaxAt ? formatTimeAgo(new Date(pair.priceMaxAt)) : undefined
+    } : undefined;
 
     const analysis: TokenAnalysis = {
       chainId: pair.chainId,
@@ -339,9 +358,8 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
       },
       fdv: pair.fdv,
       marketCap: pair.marketCap,
-      ath: pair.priceUsd ? parseFloat(pair.priceUsd) * 1.5 : undefined,
-      athDate: formatTimeAgo(new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000))), // Example ATH date
-      age: formatTimeAgo(launchDate),
+      ath,
+      age,
       holders: [
         { address: "0x1234...5678", percentage: 15.5 },
         { address: "0x8765...4321", percentage: 12.3 },
@@ -405,6 +423,9 @@ interface DexScreenerPair {
     minDex: string;
     spreadPercent: number;
   };
+  pairCreatedAt?: string;
+  priceMax?: string;
+  priceMaxAt?: string;
 }
 
 interface DexScreenerResponse {
