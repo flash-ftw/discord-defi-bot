@@ -317,6 +317,57 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
     const now = new Date();
     const launchDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)); // Example launch date
 
+    // Fetch historical data for ATH and token age
+    let ath = pair.priceUsd ? parseFloat(pair.priceUsd) * 1.5 : undefined;
+    let athDate = formatTimeAgo(new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000)));
+    let tokenAge = formatTimeAgo(launchDate);
+    
+    try {
+      // Attempt to fetch historical data from DexScreener
+      // Note: The exact endpoint might need adjustment based on DexScreener's API specification
+      const historicalResponse = await axios.get(
+        `${DEXSCREENER_API}/dex/chart/${pair.chainId}/${pair.pairAddress}/history`
+      );
+      
+      if (historicalResponse.data && historicalResponse.data.data) {
+        const historicalData = historicalResponse.data.data;
+        
+        // Find ATH from historical data
+        if (Array.isArray(historicalData)) {
+          let maxPrice = 0;
+          let maxPriceTimestamp = null;
+          
+          for (const dataPoint of historicalData) {
+            if (dataPoint.price > maxPrice) {
+              maxPrice = dataPoint.price;
+              maxPriceTimestamp = dataPoint.timestamp;
+            }
+          }
+          
+          if (maxPrice > 0) {
+            ath = maxPrice;
+            if (maxPriceTimestamp) {
+              athDate = formatTimeAgo(new Date(maxPriceTimestamp));
+            }
+          }
+          
+          // Get token age from first appearance in the historical data
+          if (historicalData.length > 0) {
+            const sortedData = [...historicalData].sort((a, b) => 
+              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            );
+            const firstTimestamp = sortedData[0].timestamp;
+            if (firstTimestamp) {
+              tokenAge = formatTimeAgo(new Date(firstTimestamp));
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.log("Error fetching historical data, using defaults:", error);
+      // Fall back to the generated values if historical data fetch fails
+    }
+    
     const analysis: TokenAnalysis = {
       chainId: pair.chainId,
       symbol: symbol,
@@ -339,9 +390,9 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
       },
       fdv: pair.fdv,
       marketCap: pair.marketCap,
-      ath: pair.priceUsd ? parseFloat(pair.priceUsd) * 1.5 : undefined,
-      athDate: formatTimeAgo(new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000))), // Example ATH date
-      age: formatTimeAgo(launchDate),
+      ath: ath,
+      athDate: athDate,
+      age: tokenAge,
       holders: [
         { address: "0x1234...5678", percentage: 15.5 },
         { address: "0x8765...4321", percentage: 12.3 },
