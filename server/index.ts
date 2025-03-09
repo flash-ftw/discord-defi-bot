@@ -24,7 +24,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Add basic root route
+// Add health check endpoint for Railway
 app.get('/', (req, res) => {
   res.json({
     status: 'online',
@@ -39,7 +39,7 @@ app.get('/', (req, res) => {
   console.log("Environment variables found:", Object.keys(process.env).filter(key => 
     key === 'DISCORD_TOKEN' || key === 'GUILD_ID').length > 0 ? 'Yes' : 'No');
   console.log("NODE_ENV:", process.env.NODE_ENV);
-  
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
@@ -47,10 +47,10 @@ app.get('/', (req, res) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+    console.error("Error:", err);
   });
 
-  const port = 5000;
+  const port = process.env.PORT || 5000;
   server.listen({
     port,
     host: "0.0.0.0",
