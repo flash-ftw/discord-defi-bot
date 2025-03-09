@@ -130,17 +130,17 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
     
     // Telegram bots
     const telegramBots = [
-      `- [MaestroP](https://t.me/MaestroProBot?start=${tokenAddress})`,
-      `- [MaestroS](https://t.me/MaestroSniperBot?start=${tokenAddress})`,
-      `- [BananaG](https://t.me/BananaGun_bot?start=${tokenAddress})`,
-      `- [SolT](https://t.me/SolTradingBot?start=${tokenAddress})`,
-      `- [Bloom](https://t.me/BloomSolanaEU2_bot?start=${tokenAddress})`,
-      `- [CallA](https://t.me/CallAnalyserBot?start=${tokenAddress})`,
-      `- [PepeB](https://t.me/pepeboost_sol_bot?start=${tokenAddress})`,
-      `- [McQueen](https://t.me/mcqueen_bonkbot?start=${tokenAddress})`,
-      `- [Paris](https://t.me/paris_trojanbot?start=${tokenAddress})`,
-      `- [TradeonN](https://t.me/TradeonNovaBot?start=${tokenAddress})`,
-      `- [Shuriken](https://t.me/ShurikenTradeBot?start=${tokenAddress})`
+      `[MaestroP](https://t.me/MaestroProBot?start=${tokenAddress})`,
+      `[MaestroS](https://t.me/MaestroSniperBot?start=${tokenAddress})`,
+      `[BananaG](https://t.me/BananaGun_bot?start=${tokenAddress})`,
+      `[SolT](https://t.me/SolTradingBot?start=${tokenAddress})`,
+      `[Bloom](https://t.me/BloomSolanaEU2_bot?start=${tokenAddress})`,
+      `[CallA](https://t.me/CallAnalyserBot?start=${tokenAddress})`,
+      `[PepeB](https://t.me/pepeboost_sol_bot?start=${tokenAddress})`,
+      `[McQueen](https://t.me/mcqueen_bonkbot?start=${tokenAddress})`,
+      `[Paris](https://t.me/paris_trojanbot?start=${tokenAddress})`,
+      `[TradeonN](https://t.me/TradeonNovaBot?start=${tokenAddress})`,
+      `[Shuriken](https://t.me/ShurikenTradeBot?start=${tokenAddress})`
     ];
     
     // Format platforms (3 per row)
@@ -149,8 +149,11 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
       platformRows.push(platforms.slice(i, i + 3).join(' • '));
     }
     
-    // Format Telegram bots (one per line)
-    const botRows = telegramBots;
+    // Format Telegram bots (4 per row)
+    const botRows = [];
+    for (let i = 0; i < telegramBots.length; i += 4) {
+      botRows.push(telegramBots.slice(i, i + 4).join(' • '));
+    }
     
     return {
       platforms: platformRows.join('\n'),
@@ -221,18 +224,18 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
       {
         name: '🔗 __Links__',
         value: [
-          `[Twitter](${analysis.twitter}) | [Chart](${analysis.dexscreenerUrl}) | [Search Similar](${analysis.googleLensUrl})`,
+          `[Twitter](${analysis.twitter}) | [Chart](${analysis.dexscreenerUrl}) | [Search Similar Logos](${analysis.googleLensUrl})`,
           `[🔍 Crawl tweets about this token](https://x.com/search?q=${tokenContract}&src=typed_query)`
         ].join('\n'),
         inline: false
       },
       {
-        name: '🌐 __Trading Platforms__(Direct Link for this CA)',
+        name: '🌐 __Trading Platforms__ (Direct Link for this CA)',
         value: createTradingLinks(tokenContract).platforms.substring(0, 1000), // Ensure we stay under Discord's 1024 character limit
         inline: false
       },
       {
-        name: '🤖 __Telegram Bots__(Direct Link for this CA)',
+        name: '🤖 __Telegram Bots__ (Direct Link for this CA)',
         value: createTradingLinks(tokenContract).telegramBots.substring(0, 1000), // Ensure we stay under Discord's 1024 character limit
         inline: false
       }
