@@ -117,18 +117,26 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
   const createTelegramLinks = (tokenAddress: string) => {
     // All trading bots with shortened names
     const allLinks = [
-      `[🤖 MaestroS](https://t.me/MaestroSniperBot?start=${tokenAddress}-rickburpbot)`,
-      `[🤖 BananaG](https://t.me/BananaGunBot?start=snprickburpbot${tokenAddress})`,
-      `[🤖 McQueen](https://t.me/mcqueenbonkbot?start=refrickbotca${tokenAddress})`,
-      `[🤖 Shuriken](https://t.me/ShurikenTradeBot?start=qt-RickSanchez-${tokenAddress})`,
-      `[🤖 PepeB](https://t.me/pepeboost_sol_bot?start=ref_0xRick_ca_${tokenAddress})`,
-      `[🤖 Bloom](https://t.me/BloomSolanaEU2_bot?start=ref_RickBot_ca_${tokenAddress})`,
-      `[🤖 Paris](https://t.me/paristrojanbot?start=d-RickBot-${tokenAddress})`,
-      `[🤖 SolT](https://t.me/SolTradingBot?start=${tokenAddress}-yqC7cGy1T)`,
-      `[🤖 MaestroP](https://t.me/MaestroProBot?start=${tokenAddress}-rickburpbot)`,
-      `[🤖 TradeonN](https://t.me/TradeonNovaBot?start=r-rick-${tokenAddress})`,
-      `[🌐 MEVX](https://mevx.io/solana/${tokenAddress}?ref=RickBot)`,
-      `[🌐 APE](https://ape.pro/solana/${tokenAddress}?ref=RPXHyi9dQHMl)`
+      `[🌐 APE](https://ape.pro/solana/${tokenAddress})`,
+      `[🌐 BullX](https://bullx.io/terminal?chainId=1399811149&address=${tokenAddress})`,
+      `[🌐 Padre](https://trade.padre.gg/trade/solana/${tokenAddress})`,
+      `[🤖 MaestroP](https://t.me/MaestroProBot?start=${tokenAddress})`,
+      `[🌐 GMGN](https://gmgn.ai/sol/token/${tokenAddress})`,
+      `[🌐 MEVX](https://mevx.io/solana/${tokenAddress})`,
+      `[🌐 Axiom](https://axiom.trade/t/${tokenAddress}/)`,
+      `[🤖 BananaG](https://t.me/BananaGun_bot?start=${tokenAddress})`,
+      `[🤖 SolT](https://t.me/SolTradingBot?start=${tokenAddress})`,
+      `[🤖 MaestroS](https://t.me/MaestroSniperBot?start=${tokenAddress})`,
+      `[🌐 Photon](https://photon-sol.tinyastro.io/en/r/${tokenAddress})`,
+      `[🤖 Bloom](https://t.me/BloomSolanaEU2_bot?start=${tokenAddress})`,
+      `[🤖 CallA](https://t.me/CallAnalyserBot?start=${tokenAddress})`,
+      `[🌐 Solscan](https://solscan.io/account/${tokenAddress})`,
+      `[🌐 Neo.BullX](https://neo.bullx.io/terminal?chainId=1399811149&address=${tokenAddress})`,
+      `[🤖 PepeB](https://t.me/pepeboost_sol_bot?start=${tokenAddress})`,
+      `[🤖 McQueen](https://t.me/mcqueen_bonkbot?start=${tokenAddress})`,
+      `[🤖 Paris](https://t.me/paris_trojanbot?start=${tokenAddress})`,
+      `[🤖 TradeonN](https://t.me/TradeonNovaBot?start=${tokenAddress})`,
+      `[🤖 Shuriken](https://t.me/ShurikenTradeBot?start=${tokenAddress})`
     ];
     
     // Discord has a 1024 character limit per field value, so we need to limit the content
@@ -204,7 +212,7 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
         name: '🔗 __Links__',
         value: [
           `[Twitter](${analysis.twitter}) | [Chart](${analysis.dexscreenerUrl}) | [Search Similar](${analysis.googleLensUrl})`,
-          `[🔍 Crawl tweets about this token](${analysis.twitter})`
+          `[🔍 Crawl tweets about this token](https://x.com/search?q=${tokenContract}&src=typed_query)`
         ].join('\n'),
         inline: false
       },
