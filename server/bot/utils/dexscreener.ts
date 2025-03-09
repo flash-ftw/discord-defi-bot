@@ -99,7 +99,7 @@ const chainIdentifiers: Record<Chain, string[]> = {
   'ethereum': ['ethereum', 'eth'],
   'base': ['base', 'base-mainnet', 'base-main', 'basemainnet', '8453'],
   'avalanche': ['avalanche', 'avax'],
-  'solana': ['solana', 'sol']
+  'solana': ['solana', 'sol', 'mainnet-beta'] // Add Solana mainnet identifier
 };
 
 function adjustPrice(price: number, symbol: string): number {
@@ -163,6 +163,12 @@ function filterValidPairs(pairs: DexScreenerPair[], chain: Chain): DexScreenerPa
   const validPairs = pairs.filter(pair => {
     const chainId = pair.chainId.toLowerCase();
     const validIdentifiers = chainIdentifiers[chain];
+
+    // Special case for Solana addresses
+    if (chain === 'solana' && chainId.includes('solana')) {
+      return true;
+    }
+
     if (!validIdentifiers?.some(id => chainId.includes(id))) {
       console.log(`Invalid chain ${chainId}, expecting one of: ${validIdentifiers?.join(', ')}`);
       return false;
@@ -324,21 +330,27 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
     const pair = validPairs[0];
     const symbol = pair.baseToken.symbol.toUpperCase();
 
-    // Calculate token age using actual pair creation time
-    const age = pair.pairCreatedAt ? {
-      createdAt: pair.pairCreatedAt,
-      formattedAge: formatTimeAgo(new Date(pair.pairCreatedAt))
-    } : undefined;
+    // Simple age calculation from pair creation date
+    let ageInfo = undefined;
+    if (pair.pairCreatedAt) {
+      ageInfo = {
+        createdAt: pair.pairCreatedAt,
+        formattedAge: formatTimeAgo(new Date(pair.pairCreatedAt))
+      };
+    }
 
-    // Calculate ATH using actual price max data
-    const ath = pair.priceMax ? {
-      price: parseFloat(pair.priceMax),
-      date: pair.priceMaxAt ? formatTimeAgo(new Date(pair.priceMaxAt)) : undefined
-    } : undefined;
+    // Simple ATH calculation from max price
+    let athInfo = undefined;
+    if (pair.priceMax) {
+      athInfo = {
+        price: Number(pair.priceMax),
+        date: pair.priceMaxAt ? formatTimeAgo(new Date(pair.priceMaxAt)) : undefined
+      };
+    }
 
     const analysis: TokenAnalysis = {
       chainId: pair.chainId,
-      symbol: symbol,
+      symbol,
       name: pair.baseToken.name,
       priceUsd: adjustPrice(parseFloat(pair.priceUsd), symbol),
       priceChange24h: pair.priceChange?.h24 || 0,
@@ -358,8 +370,8 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
       },
       fdv: pair.fdv,
       marketCap: pair.marketCap,
-      ath,
-      age,
+      ath: athInfo,
+      age: ageInfo,
       holders: [
         { address: "0x1234...5678", percentage: 15.5 },
         { address: "0x8765...4321", percentage: 12.3 },
