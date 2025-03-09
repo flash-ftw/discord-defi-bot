@@ -91,7 +91,7 @@ const chainIdentifiers: Record<Chain, string[]> = {
   'ethereum': ['ethereum', 'eth'],
   'base': ['base', 'base-mainnet', 'base-main', 'basemainnet', '8453'],
   'avalanche': ['avalanche', 'avax'],
-  'solana': ['solana', 'sol']
+  'solana': ['solana', 'sol', 'mainnet-beta']
 };
 
 function adjustPrice(price: number, symbol: string): number {
