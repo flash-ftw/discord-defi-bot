@@ -96,10 +96,18 @@ function validateTokenAddress(address: string): boolean {
   return evmPattern.test(address) || solanaPattern.test(address);
 }
 
-export function createTokenEmbed(analysis: any, tokenContract: string, chain: string): EmbedBuilder {
+function createTokenEmbed(analysis: any, tokenContract: string, chain: string): EmbedBuilder {
   const sentiment = analyzeMarketSentiment(analysis);
   const chainEmoji = getChainEmoji(chain);
   const embedColor = getEmbedColor(analysis.priceChange24h);
+
+  // Format token age display
+  const tokenAge = analysis.age?.formattedAge || 'Unknown';
+
+  // Format ATH display
+  const athDisplay = analysis.ath 
+    ? `**ATH:** ${formatUSD(analysis.ath.price)}${analysis.ath.date ? ` (${analysis.ath.date})` : ''}`
+    : '**ATH:** `N/A`';
 
   const securityStatus = {
     liquidityLocked: analysis.securityStatus?.liquidityLocked || false, 
@@ -125,7 +133,7 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
           `**Current Price:** ${formatUSD(analysis.priceUsd)}`,
           `**24h Change:** ${formatPercentage(analysis.priceChange24h)}`,
           `**1h Change:** ${formatPercentage(analysis.priceChange1h)}`,
-          `**ATH:** ${formatUSD(analysis.ath)} (${analysis.athDate})`
+          athDisplay
         ].join('\n'),
         inline: false
       },
@@ -135,7 +143,7 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
           `**Market Cap:** ${formatUSD(analysis.marketCap)}`,
           analysis.fdv ? `**FDV:** ${formatUSD(analysis.fdv)}` : null,
           `**Volume (24h):** ${formatUSD(analysis.volume?.h24)}`,
-          `**Token Age:** ${analysis.age}`
+          `**Token Age:** ${tokenAge}`
         ].filter(Boolean).join('\n'),
         inline: true
       },
