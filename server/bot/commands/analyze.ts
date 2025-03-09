@@ -131,9 +131,9 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
       `[🌐 APE](https://ape.pro/solana/${tokenAddress}?ref=RPXHyi9dQHMl)`
     ];
     
-    // Return all links in a compact grid format - 4 per row
+    // Discord has a 1024 character limit per field value, so we need to limit the content
     const rows = [];
-    for (let i = 0; i < allLinks.length; i += 4) {
+    for (let i = 0; i < Math.min(allLinks.length, 8); i += 4) { // Limit to first 8 links max
       rows.push(allLinks.slice(i, i + 4).join(' • '));
     }
     
@@ -210,7 +210,7 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
       },
       {
         name: '🤖 __Trade With Bots__',
-        value: createTelegramLinks(tokenContract),
+        value: createTelegramLinks(tokenContract).substring(0, 1000), // Ensure we stay under Discord's 1024 character limit
         inline: false
       }
     )
