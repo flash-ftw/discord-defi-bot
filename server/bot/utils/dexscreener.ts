@@ -94,12 +94,12 @@ const STABLECOIN_DEFAULTS = {
   }
 };
 
-// Chain identifier mapping for validation
+// Update the chain identifiers mapping
 const chainIdentifiers: Record<Chain, string[]> = {
   'ethereum': ['ethereum', 'eth'],
   'base': ['base', 'base-mainnet', 'base-main', 'basemainnet', '8453'],
   'avalanche': ['avalanche', 'avax'],
-  'solana': ['solana', 'sol', 'mainnet-beta'] // Add Solana mainnet identifier
+  'solana': ['solana', 'sol', 'mainnet-beta']
 };
 
 function adjustPrice(price: number, symbol: string): number {
@@ -165,7 +165,8 @@ function filterValidPairs(pairs: DexScreenerPair[], chain: Chain): DexScreenerPa
     const validIdentifiers = chainIdentifiers[chain];
 
     // Special case for Solana addresses
-    if (chain === 'solana' && chainId.includes('solana')) {
+    if (chain === 'solana' && (chainId.includes('solana') || chainId.includes('mainnet-beta'))) {
+      console.log(`Validated Solana pair on ${chainId}`);
       return true;
     }
 
@@ -214,48 +215,9 @@ function filterValidPairs(pairs: DexScreenerPair[], chain: Chain): DexScreenerPa
       return false;
     }
 
-    // For stablecoins, maintain default transaction counts even if pair is valid
-    if (isStablecoin) {
-      const defaults = STABLECOIN_DEFAULTS[pair.baseToken.symbol as keyof typeof STABLECOIN_DEFAULTS];
-      if (defaults) {
-        pair.txns = {
-          h24: {
-            buys: defaults.transactions.buys,
-            sells: defaults.transactions.sells
-          }
-        };
-      }
-    }
-
     console.log(`Valid ${chain} pair: ${pair.dexId}, Price: $${pair.priceUsd}, Transactions:`, pair.txns?.h24);
     return true;
   });
-
-  if (validPairs.length === 0) {
-    console.log(`No valid pairs found after filtering`);
-
-    // For stablecoins, return a pair with default values
-    const stablePair = stablePairs[0];
-    if (stablePair && STABLECOIN_DEFAULTS[stablePair.baseToken.symbol as keyof typeof STABLECOIN_DEFAULTS]) {
-      const defaults = STABLECOIN_DEFAULTS[stablePair.baseToken.symbol as keyof typeof STABLECOIN_DEFAULTS];
-      stablePair.liquidity = { usd: defaults.minLiquidity };
-      stablePair.volume = { h24: defaults.volume24h };
-      stablePair.marketCap = defaults.marketCap;
-      stablePair.priceUsd = "1.0000";
-      stablePair.fdv = defaults.fdv;
-      stablePair.txns = {
-        h24: {
-          buys: defaults.transactions.buys,
-          sells: defaults.transactions.sells
-        }
-      };
-      console.log(`Returning default stablecoin values for ${stablePair.baseToken.symbol}`, {
-        txns: stablePair.txns.h24,
-        liquidity: stablePair.liquidity.usd
-      });
-      return [stablePair];
-    }
-  }
 
   return validPairs;
 }
