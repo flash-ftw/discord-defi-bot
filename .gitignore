@@ -47,3 +47,11 @@ replit.nix
 .vercel
 .next
 .env.production
+
+# Testing
+coverage/
+.nyc_output/
+
+# Logs
+logs/
+*.log
