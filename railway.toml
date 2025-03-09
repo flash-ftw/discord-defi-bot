@@ -12,13 +12,11 @@ restartLimit = 3
 
 [deploy.envs]
 NODE_ENV = "production"
-PORT = "5000"
 
-# Specify Node.js version
 [build.env]
 NODE_VERSION = "20.x"
+NPM_VERSION = "10.x"
 
-# Configure build cache
 [build.cache]
 enabled = true
 paths = ["node_modules"]
