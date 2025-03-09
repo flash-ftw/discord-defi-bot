@@ -114,24 +114,28 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
     '*Holder data not available* ⚠️';
 
   // Format Telegram bot links in a compact view
-  const createTelegramLinks = (tokenAddress: string) => {
-    // All trading bots with shortened names
-    const allLinks = [
+  const createTradingLinks = (tokenAddress: string) => {
+    // Trading platforms
+    const platforms = [
       `[🌐 APE](https://ape.pro/solana/${tokenAddress})`,
       `[🌐 BullX](https://bullx.io/terminal?chainId=1399811149&address=${tokenAddress})`,
+      `[🌐 Neo.BullX](https://neo.bullx.io/terminal?chainId=1399811149&address=${tokenAddress})`,
       `[🌐 Padre](https://trade.padre.gg/trade/solana/${tokenAddress})`,
-      `[🤖 MaestroP](https://t.me/MaestroProBot?start=${tokenAddress})`,
       `[🌐 GMGN](https://gmgn.ai/sol/token/${tokenAddress})`,
       `[🌐 MEVX](https://mevx.io/solana/${tokenAddress})`,
       `[🌐 Axiom](https://axiom.trade/t/${tokenAddress}/)`,
+      `[🌐 Photon](https://photon-sol.tinyastro.io/en/r/${tokenAddress})`,
+      `[🌐 Solscan](https://solscan.io/account/${tokenAddress})`
+    ];
+    
+    // Telegram bots
+    const telegramBots = [
+      `[🤖 MaestroP](https://t.me/MaestroProBot?start=${tokenAddress})`,
+      `[🤖 MaestroS](https://t.me/MaestroSniperBot?start=${tokenAddress})`,
       `[🤖 BananaG](https://t.me/BananaGun_bot?start=${tokenAddress})`,
       `[🤖 SolT](https://t.me/SolTradingBot?start=${tokenAddress})`,
-      `[🤖 MaestroS](https://t.me/MaestroSniperBot?start=${tokenAddress})`,
-      `[🌐 Photon](https://photon-sol.tinyastro.io/en/r/${tokenAddress})`,
       `[🤖 Bloom](https://t.me/BloomSolanaEU2_bot?start=${tokenAddress})`,
       `[🤖 CallA](https://t.me/CallAnalyserBot?start=${tokenAddress})`,
-      `[🌐 Solscan](https://solscan.io/account/${tokenAddress})`,
-      `[🌐 Neo.BullX](https://neo.bullx.io/terminal?chainId=1399811149&address=${tokenAddress})`,
       `[🤖 PepeB](https://t.me/pepeboost_sol_bot?start=${tokenAddress})`,
       `[🤖 McQueen](https://t.me/mcqueen_bonkbot?start=${tokenAddress})`,
       `[🤖 Paris](https://t.me/paris_trojanbot?start=${tokenAddress})`,
@@ -139,13 +143,22 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
       `[🤖 Shuriken](https://t.me/ShurikenTradeBot?start=${tokenAddress})`
     ];
     
-    // Discord has a 1024 character limit per field value, so we need to limit the content
-    const rows = [];
-    for (let i = 0; i < Math.min(allLinks.length, 8); i += 4) { // Limit to first 8 links max
-      rows.push(allLinks.slice(i, i + 4).join(' • '));
+    // Format platforms (3 per row)
+    const platformRows = [];
+    for (let i = 0; i < platforms.length; i += 3) {
+      platformRows.push(platforms.slice(i, i + 3).join(' • '));
     }
     
-    return rows.join('\n');
+    // Format Telegram bots (3 per row)
+    const botRows = [];
+    for (let i = 0; i < telegramBots.length; i += 3) {
+      botRows.push(telegramBots.slice(i, i + 3).join(' • '));
+    }
+    
+    return {
+      platforms: platformRows.join('\n'),
+      telegramBots: botRows.join('\n')
+    };
   };
 
   return new EmbedBuilder()
@@ -217,8 +230,13 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
         inline: false
       },
       {
-        name: '🤖 __Trade With Bots__',
-        value: createTelegramLinks(tokenContract).substring(0, 1000), // Ensure we stay under Discord's 1024 character limit
+        name: '🌐 __Trading Platforms__',
+        value: createTradingLinks(tokenContract).platforms.substring(0, 1000), // Ensure we stay under Discord's 1024 character limit
+        inline: false
+      },
+      {
+        name: '🤖 __Telegram Bots__',
+        value: createTradingLinks(tokenContract).telegramBots.substring(0, 1000), // Ensure we stay under Discord's 1024 character limit
         inline: false
       }
     )
