@@ -140,7 +140,7 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
       `[McQueen](https://t.me/mcqueen_bonkbot?start=${tokenAddress})`,
       `[Paris](https://t.me/paris_trojanbot?start=${tokenAddress})`,
       `[TradeonN](https://t.me/TradeonNovaBot?start=${tokenAddress})`,
-      `[Shuriken](https://t.me/ShurikenTradeBot?start=${tokenAddress})`
+      `[Shuriken])`
     ];
     
     // Format platforms (3 per row)
