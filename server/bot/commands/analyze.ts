@@ -52,41 +52,38 @@ function getEmbedColor(priceChange24h: number): number {
   return 0x5865F2; // Discord blurple for neutral
 }
 
-function analyzeMarketSentiment(analysis: any): string[] {
-  const signals = [];
-
+function analyzeMarketSentiment(analysis: any): string {
   try {
-    // Price momentum
+    let sentimentScore = 5; // Start with neutral (5 green, 5 red)
+    
+    // Price momentum impact (-3 to +3)
     if (analysis.priceChange1h > 0 && analysis.priceChange24h > 0) {
-      signals.push('🚀 **Strong Bullish Momentum** 💫');
+      sentimentScore += Math.min(3, Math.floor((analysis.priceChange24h + analysis.priceChange1h) / 5));
     } else if (analysis.priceChange1h < 0 && analysis.priceChange24h < 0) {
-      signals.push('🐻 **Bearish Pressure** ⚠️');
+      sentimentScore -= Math.min(3, Math.floor(Math.abs(analysis.priceChange24h + analysis.priceChange1h) / 5));
     }
 
-    // Volume analysis
+    // Volume impact (-2 to +2)
     if (analysis.volume?.h24 > 0) {
       const hourlyVolume = (analysis.volume.h24 / 24);
       if (analysis.volume?.h1 > hourlyVolume * 1.5) {
-        signals.push('📊 **High Volume Alert** 🔥');
+        sentimentScore += 2;
+      } else if (analysis.volume?.h1 < hourlyVolume * 0.5) {
+        sentimentScore -= 2;
       }
     }
 
-    // Buy/Sell ratio analysis
-    if (analysis.transactions) {
-      const ratio = analysis.transactions.buys24h / (analysis.transactions.sells24h || 1);
-      if (ratio > 1.5) signals.push('💫 **Strong Buying Pressure** 🌊');
-      else if (ratio < 0.67) signals.push('⚠️ **Heavy Selling Detected** 📉');
-    }
-
-    // Price differential analysis
-    if (analysis.priceDifferential && analysis.priceDifferential.spreadPercent > 1) {
-      signals.push(`💹 **${analysis.priceDifferential.spreadPercent.toFixed(2)}% Arbitrage** between \`${analysis.priceDifferential.maxDex}\` and \`${analysis.priceDifferential.minDex}\` 💰`);
-    }
-
-    return signals.length > 0 ? signals : ['📊 *Neutral market activity* ⚖️'];
+    // Clamp score between 0 and 10
+    sentimentScore = Math.max(0, Math.min(10, sentimentScore));
+    
+    // Generate emoji boxes
+    const greenBoxes = '🟩'.repeat(sentimentScore);
+    const redBoxes = '🟥'.repeat(10 - sentimentScore);
+    
+    return `${greenBoxes}${redBoxes}`;
   } catch (error) {
     console.error('Error in market sentiment analysis:', error);
-    return ['📊 *Unable to analyze market sentiment* ⚠️'];
+    return '🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨'; // Yellow boxes for error state
   }
 }
 
@@ -106,142 +103,91 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
     mintable: analysis.securityStatus?.mintable || false 
   };
 
-  // Format holders info more compactly
+  // Format holders info with emojis and better spacing
   const holdersInfo = analysis.holders ? 
     analysis.holders.slice(0, 5).map((holder: any, index: number) => 
-      `${['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][index]} \`${holder.percentage}%\``
-    ).join(' | ') :
+      `${['👑', '🥈', '🥉', '💎', '💫'][index]} \`${holder.percentage.toFixed(2)}%\``
+    ).join('\n') :
     '*Holder data not available* ⚠️';
 
-  // Format Telegram bot links in a compact view
-  const createTradingLinks = (tokenAddress: string) => {
-    // Trading platforms
-    const platforms = [
-      `[🌐 APE](https://ape.pro/solana/${tokenAddress})`,
-      `[🌐 BullX](https://bullx.io/terminal?chainId=1399811149&address=${tokenAddress})`,
-      `[🌐 Neo.BullX](https://neo.bullx.io/terminal?chainId=1399811149&address=${tokenAddress})`,
-      `[🌐 Padre](https://trade.padre.gg/trade/solana/${tokenAddress})`,
-      `[🌐 GMGN](https://gmgn.ai/sol/token/${tokenAddress})`,
-      `[🌐 MEVX](https://mevx.io/solana/${tokenAddress})`,
-      `[🌐 Axiom](https://axiom.trade/t/${tokenAddress}/)`,
-      `[🌐 Photon](https://photon-sol.tinyastro.io/en/r/${tokenAddress})`,
-      `[🌐 Solscan](https://solscan.io/account/${tokenAddress})`
-    ];
-    
-    // Telegram bots
-    const telegramBots = [
-      `[MaestroP](https://t.me/MaestroProBot?start=${tokenAddress})`,
-      `[MaestroS](https://t.me/MaestroSniperBot?start=${tokenAddress})`,
-      `[BananaG](https://t.me/BananaGun_bot?start=${tokenAddress})`,
-      `[SolT](https://t.me/SolTradingBot?start=${tokenAddress})`,
-      `[Bloom](https://t.me/BloomSolanaEU2_bot?start=${tokenAddress})`,
-      `[CallA](https://t.me/CallAnalyserBot?start=${tokenAddress})`,
-      `[PepeB](https://t.me/pepeboost_sol_bot?start=${tokenAddress})`,
-      `[McQueen](https://t.me/mcqueen_bonkbot?start=${tokenAddress})`,
-      `[Paris](https://t.me/paris_trojanbot?start=${tokenAddress})`,
-      `[TradeonN](https://t.me/TradeonNovaBot?start=${tokenAddress})`,
-    ];
-    
-    // Format platforms (3 per row)
-    const platformRows = [];
-    for (let i = 0; i < platforms.length; i += 3) {
-      platformRows.push(platforms.slice(i, i + 3).join(' • '));
-    }
-    
-    // Format Telegram bots (4 per row)
-    const botRows = [];
-    for (let i = 0; i < telegramBots.length; i += 4) {
-      botRows.push(telegramBots.slice(i, i + 4).join(' • '));
-    }
-    
-    return {
-      platforms: platformRows.join('\n'),
-      telegramBots: botRows.join('\n')
-    };
-  };
+  // Create quick stats line without buy/sell ratio
+  const quickStats = [
+    `💰 \`$${analysis.priceUsd?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}\``,
+    `💧 \`$${analysis.liquidity?.usd?.toLocaleString() || '0'}\``,
+    `📊 Vol: ${formatUSD(analysis.volume?.h24)}`
+  ].join(' │ ');
+
+  // Format market metrics with better alignment
+  const marketMetrics = [
+    `**Market Cap:** ${formatUSD(analysis.marketCap)}`,
+    `**Volume (24h):** ${formatUSD(analysis.volume?.h24)}`,
+    `**Token Age:** ${analysis.age}`
+  ].filter(Boolean);
+
+  // Enhanced security status with more detailed indicators
+  const securityIndicators = [
+    `${securityStatus.liquidityLocked ? '🔒 **SAFU:**' : '🔓 **RISK:**'} ${securityStatus.liquidityLocked ? 'Liquidity Locked' : 'Unlocked Liquidity'}`,
+    `${securityStatus.mintable ? '⚠️ **CAUTION:**' : '✅ **SAFE:**'} ${securityStatus.mintable ? 'Mintable Token' : 'Non-Mintable'}`
+  ];
 
   return new EmbedBuilder()
     .setColor(embedColor)
     .setTitle(`${chainEmoji} ${analysis.name} (${analysis.symbol})`)
-    .setDescription(`**Token Analysis on ${chain.charAt(0).toUpperCase() + chain.slice(1)}** 🔍\n\nContract: \`${tokenContract}\``)
+    .setDescription(
+      `**Token Analysis on ${chain.charAt(0).toUpperCase() + chain.slice(1)}** 🔍\n` +
+      `\`${tokenContract}\`\n\n` +
+      `${quickStats}\n\n` +
+      `**Market Sentiment:**\n${sentiment}`
+    )
     .setThumbnail(analysis.logo)
     .addFields(
       { 
-        name: '💰 __Price Information__',
+        name: '📊 __Price Analysis__',
         value: [
-          `**Current Price:** ${formatUSD(analysis.priceUsd)}`,
-          `**24h Change:** ${formatPercentage(analysis.priceChange24h)}`,
+          `**Current:** ${formatUSD(analysis.priceUsd)}`,
           `**1h Change:** ${formatPercentage(analysis.priceChange1h)}`,
           `**ATH:** ${formatUSD(analysis.ath)} (${analysis.athDate})`
         ].join('\n'),
-        inline: false
-      },
-      {
-        name: '📊 __Market Metrics__',
-        value: [
-          `**Market Cap:** ${formatUSD(analysis.marketCap)}`,
-          analysis.fdv ? `**FDV:** ${formatUSD(analysis.fdv)}` : null,
-          `**Volume (24h):** ${formatUSD(analysis.volume?.h24)}`,
-          `**Token Age:** ${analysis.age}`
-        ].filter(Boolean).join('\n'),
         inline: true
       },
       {
-        name: '💧 __Liquidity Info__',
-        value: [
-          `**Current:** ${formatUSD(analysis.liquidity?.usd)}`,
-          analysis.liquidity?.change24h !== undefined ?
-            `**24h Change:** ${formatPercentage(analysis.liquidity.change24h)}` : null
-        ].filter(Boolean).join('\n'),
+        name: '💰 __Market Data__',
+        value: marketMetrics.join('\n'),
         inline: true
       },
       {
-        name: '👥 __Top Holders Distribution__',
+        name: '\u200b',
+        value: '\u200b',
+        inline: true
+      },
+      {
+        name: '🏆 __Top Holders__',
         value: holdersInfo,
-        inline: false
+        inline: true
       },
       {
-        name: '🔒 __Security Status__',
+        name: '🛡️ __Security Check__',
+        value: securityIndicators.join('\n'),
+        inline: true
+      },
+      {
+        name: '\u200b',
+        value: '\u200b',
+        inline: true
+      },
+      {
+        name: '🔗 __Quick Links__',
         value: [
-          `${securityStatus.liquidityLocked ? '🔒' : '🔓'} **Liquidity:** ${securityStatus.liquidityLocked ? 'Locked' : 'Unlocked'}`,
-          `${securityStatus.mintable ? '⚠️' : '✅'} **Mint Function:** ${securityStatus.mintable ? 'Active' : 'None'}`
-        ].join(' | '),
-        inline: false
-      },
-      {
-        name: '📈 __Trading Activity__',
-        value: analysis.transactions ?
-          formatTransactions(analysis.transactions.buys24h, analysis.transactions.sells24h) :
-          '*No transaction data available* ⚠️',
-        inline: false
-      },
-      {
-        name: '🎯 __Market Sentiment__',
-        value: sentiment.join('\n'),
-        inline: false
-      },
-      {
-        name: '🔗 __Links__',
-        value: [
-          `[Twitter](${analysis.twitter}) | [Chart](${analysis.dexscreenerUrl}) | [Search Similar Logos](${analysis.googleLensUrl})`,
-          `[🔍 Crawl tweets about this token](https://x.com/search?q=${tokenContract}&src=typed_query)`
+          `[📊 Chart](${analysis.dexscreenerUrl}) • [🐦 Twitter](${analysis.twitter}) • [🔍 Similar Logos](${analysis.googleLensUrl})`,
+          `[🔎 Token Explorer](https://x.com/search?q=${tokenContract}&src=typed_query)`
         ].join('\n'),
-        inline: false
-      },
-      {
-        name: '🌐 __Trading Platforms__ (Direct Link for this CA)',
-        value: createTradingLinks(tokenContract).platforms.substring(0, 1000), // Ensure we stay under Discord's 1024 character limit
-        inline: false
-      },
-      {
-        name: '🤖 __Telegram Bots__ (Direct Link for this CA)',
-        value: createTradingLinks(tokenContract).telegramBots.substring(0, 1000), // Ensure we stay under Discord's 1024 character limit
         inline: false
       }
     )
     .setTimestamp()
     .setFooter({ 
-      text: `Powered by chefs for the cooks 👨‍🍳` 
+      text: `Powered by DeFi Analytics • Real-time market data`,
+      iconURL: 'https://i.imgur.com/AfFp7pu.png'
     });
 }
 
