@@ -110,18 +110,19 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
     ).join('\n') :
     '*Holder data not available* ⚠️';
 
-  // Create quick stats line without buy/sell ratio
+  // Create quick stats line with more compact format
   const quickStats = [
     `💰 \`$${analysis.priceUsd?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}\``,
     `💧 \`$${analysis.liquidity?.usd?.toLocaleString() || '0'}\``,
     `📊 Vol: ${formatUSD(analysis.volume?.h24)}`
   ].join(' │ ');
 
-  // Format market metrics with better alignment
+  // Format market metrics with better alignment and more data
   const marketMetrics = [
     `**Market Cap:** ${formatUSD(analysis.marketCap)}`,
     `**Volume (24h):** ${formatUSD(analysis.volume?.h24)}`,
-    `**Token Age:** ${analysis.age}`
+    `**FDV:** ${formatUSD(analysis.fdv)}`,
+    `**Token Age:** ${analysis.age || 'Unknown'}`
   ].filter(Boolean);
 
   // Enhanced security status with more detailed indicators
@@ -129,6 +130,10 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
     `${securityStatus.liquidityLocked ? '🔒 **SAFU:**' : '🔓 **RISK:**'} ${securityStatus.liquidityLocked ? 'Liquidity Locked' : 'Unlocked Liquidity'}`,
     `${securityStatus.mintable ? '⚠️ **CAUTION:**' : '✅ **SAFE:**'} ${securityStatus.mintable ? 'Mintable Token' : 'Non-Mintable'}`
   ];
+
+  // Format price change with emoji and color
+  const priceChangeEmoji = analysis.priceChange1h > 0 ? '🚀 💚' : '🔻 ❤️';
+  const priceChangeText = `${priceChangeEmoji} ${analysis.priceChange1h?.toFixed(2)}%`;
 
   return new EmbedBuilder()
     .setColor(embedColor)
@@ -145,8 +150,8 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
         name: '📊 __Price Analysis__',
         value: [
           `**Current:** ${formatUSD(analysis.priceUsd)}`,
-          `**1h Change:** ${formatPercentage(analysis.priceChange1h)}`,
-          `**ATH:** ${formatUSD(analysis.ath)} (${analysis.athDate})`
+          `**1h Change:** ${priceChangeText}`,
+          `**ATH:** ${formatUSD(analysis.ath)} ${analysis.athDate ? `(${analysis.athDate})` : '(Unknown)'}`
         ].join('\n'),
         inline: true
       },
@@ -179,15 +184,15 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
         name: '🔗 __Quick Links__',
         value: [
           `[📊 Chart](${analysis.dexscreenerUrl}) • [🐦 Twitter](${analysis.twitter}) • [🔍 Similar Logos](${analysis.googleLensUrl})`,
-          `[🔎 Tweets About ](https://x.com/search?q=${tokenContract}&src=typed_query)`
+          `[🔎 Token Explorer](https://x.com/search?q=${tokenContract}&src=typed_query)`
         ].join('\n'),
         inline: false
       }
     )
     .setTimestamp()
     .setFooter({ 
-      text: `Powered by TBD Chefs 👨‍🍳 • Real-time market data`,
-      iconURL: 'https://i.imgur.com/zzz'
+      text: `Powered by DeFi Analytics • Real-time market data`,
+      iconURL: 'https://i.imgur.com/AfFp7pu.png'
     });
 }
 
