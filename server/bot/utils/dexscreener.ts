@@ -1,6 +1,22 @@
 import { Chain } from "@shared/schema";
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 import NodeCache from "node-cache";
+
+// Add type declarations for external modules
+declare module 'axios' {
+  export interface AxiosResponse<T = any> {
+    data: T;
+  }
+}
+
+declare module 'node-cache' {
+  export default class NodeCache {
+    constructor(options?: { stdTTL?: number });
+    get<T>(key: string): T | undefined;
+    set(key: string, value: any, ttl?: number): boolean;
+    flushAll(): void;
+  }
+}
 
 const DEXSCREENER_API = "https://api.dexscreener.com/latest";
 const cache = new NodeCache({ stdTTL: 300 }); // 5 minutes cache
@@ -9,15 +25,83 @@ const cache = new NodeCache({ stdTTL: 300 }); // 5 minutes cache
 cache.flushAll();
 console.log('DexScreener cache cleared');
 
+// Add validation thresholds
+const VALIDATION_THRESHOLDS = {
+  MIN_PRICE: 0.00000001,
+  MAX_PRICE: 1000000,
+  MIN_LIQUIDITY: 100,
+  MIN_VOLUME: 10,
+  MIN_HOLDERS: 1,
+  MAX_HOLDERS: 1000000,
+  MIN_PERCENTAGE: 0,
+  MAX_PERCENTAGE: 100,
+  MIN_TIMESTAMP: 0,
+  MAX_TIMESTAMP: Date.now() + (365 * 24 * 60 * 60 * 1000), // 1 year in future
+};
+
+// Add time format thresholds
+const TIME_THRESHOLDS = {
+  MINUTE: 60,
+  HOUR: 3600,
+  DAY: 86400,
+  WEEK: 604800,
+  MONTH: 2592000, // 30 days
+  YEAR: 31536000, // 365 days
+};
+
+function validatePrice(price: number): boolean {
+  return price >= VALIDATION_THRESHOLDS.MIN_PRICE && 
+         price <= VALIDATION_THRESHOLDS.MAX_PRICE && 
+         !isNaN(price) && 
+         isFinite(price);
+}
+
+function validateTimestamp(timestamp: number): boolean {
+  return timestamp >= VALIDATION_THRESHOLDS.MIN_TIMESTAMP && 
+         timestamp <= VALIDATION_THRESHOLDS.MAX_TIMESTAMP;
+}
+
+function validatePercentage(percentage: number): boolean {
+  return percentage >= VALIDATION_THRESHOLDS.MIN_PERCENTAGE && 
+         percentage <= VALIDATION_THRESHOLDS.MAX_PERCENTAGE;
+}
+
 function formatTimeAgo(timestamp: string | Date): string {
   const date = new Date(timestamp);
+  if (!validateTimestamp(date.getTime())) {
+    console.log(`Invalid timestamp: ${timestamp}`);
+    return 'Unknown';
+  }
+
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-  if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
-  return `${Math.floor(diffInSeconds / 86400)} days ago`;
+  if (diffInSeconds < TIME_THRESHOLDS.MINUTE) {
+    return `${diffInSeconds}s ago`;
+  }
+  if (diffInSeconds < TIME_THRESHOLDS.HOUR) {
+    const minutes = Math.floor(diffInSeconds / TIME_THRESHOLDS.MINUTE);
+    return `${minutes}m ago`;
+  }
+  if (diffInSeconds < TIME_THRESHOLDS.DAY) {
+    const hours = Math.floor(diffInSeconds / TIME_THRESHOLDS.HOUR);
+    return `${hours}h ago`;
+  }
+  if (diffInSeconds < TIME_THRESHOLDS.WEEK) {
+    const days = Math.floor(diffInSeconds / TIME_THRESHOLDS.DAY);
+    return `${days}d ago`;
+  }
+  if (diffInSeconds < TIME_THRESHOLDS.MONTH) {
+    const weeks = Math.floor(diffInSeconds / TIME_THRESHOLDS.WEEK);
+    return `${weeks}w ago`;
+  }
+  if (diffInSeconds < TIME_THRESHOLDS.YEAR) {
+    const months = Math.floor(diffInSeconds / TIME_THRESHOLDS.MONTH);
+    return `${months}mo ago`;
+  }
+  const years = Math.floor(diffInSeconds / TIME_THRESHOLDS.YEAR);
+  const remainingMonths = Math.floor((diffInSeconds % TIME_THRESHOLDS.YEAR) / TIME_THRESHOLDS.MONTH);
+  return `${years}y${remainingMonths > 0 ? ` ${remainingMonths}mo` : ''} ago`;
 }
 
 function getDexScreenerLogoUrl(tokenContract: string, chain: string): string {
@@ -317,6 +401,8 @@ interface DexScreenerPair {
     symbol: string;
     name: string;
     address: string;
+    website?: string;
+    twitter?: string;
   };
   txns?: {
     h24?: {
@@ -333,6 +419,15 @@ interface DexScreenerPair {
     minDex: string;
     spreadPercent: number;
   };
+  security?: {
+    liquidityLocked: boolean;
+    mintable: boolean;
+  };
+  holders?: Array<{
+    address: string;
+    percentage: number;
+  }>;
+  createdAt?: string; // Add creation timestamp
 }
 
 interface DexScreenerResponse {
@@ -394,6 +489,19 @@ async function withRetry<T>(
   }
 }
 
+interface DexScreenerCandle {
+  timestamp: number;
+  high: number;
+  low: number;
+  open: number;
+  close: number;
+  volume: number;
+}
+
+interface DexScreenerHistoricalResponse {
+  candles: DexScreenerCandle[];
+}
+
 // Add parallel data fetching
 async function fetchHistoricalData(pair: DexScreenerPair): Promise<{
   ath: number | undefined;
@@ -402,6 +510,7 @@ async function fetchHistoricalData(pair: DexScreenerPair): Promise<{
 }> {
   const pairAddress = pair.pairAddress || pair.address;
   if (!pairAddress) {
+    console.log(`No pair address found for historical data`);
     return { ath: undefined, athDate: '', tokenAge: '' };
   }
 
@@ -419,68 +528,109 @@ async function fetchHistoricalData(pair: DexScreenerPair): Promise<{
   }
 
   try {
-    const historicalResponse = await withRetry(() => axios.get(
-      `${DEXSCREENER_API}/dex/pairs/${pair.chainId}/${pairAddress}/candles`,
-      {
-        params: {
-          from: Math.floor(Date.now() / 1000) - (365 * 24 * 60 * 60),
-          to: Math.floor(Date.now() / 1000),
-          resolution: '1D'
+    // Get historical candles with different resolutions
+    const [dailyResponse, hourlyResponse] = await Promise.all([
+      withRetry(() => axios.get<DexScreenerHistoricalResponse>(
+        `${DEXSCREENER_API}/dex/pairs/${pair.chainId}/${pairAddress}/candles`,
+        {
+          params: {
+            from: Math.floor(Date.now() / 1000) - (365 * 24 * 60 * 60), // 1 year ago
+            to: Math.floor(Date.now() / 1000),
+            resolution: '1D'
+          }
         }
-      }
-    ));
+      )),
+      withRetry(() => axios.get<DexScreenerHistoricalResponse>(
+        `${DEXSCREENER_API}/dex/pairs/${pair.chainId}/${pairAddress}/candles`,
+        {
+          params: {
+            from: Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60), // 7 days ago
+            to: Math.floor(Date.now() / 1000),
+            resolution: '1H'
+          }
+        }
+      ))
+    ]);
 
-    if (!historicalResponse.data?.candles?.length) {
+    const dailyData = dailyResponse.data as DexScreenerHistoricalResponse;
+    const hourlyData = hourlyResponse.data as DexScreenerHistoricalResponse;
+
+    if (!dailyData?.candles?.length && !hourlyData?.candles?.length) {
+      console.log(`No historical candles found for ${pairAddress}`);
       return { ath: undefined, athDate: '', tokenAge: '' };
     }
 
-    const candles = historicalResponse.data.candles;
+    const dailyCandles = dailyData?.candles || [];
+    const hourlyCandles = hourlyData?.candles || [];
     let maxPrice = 0;
     let maxPriceTimestamp = 0;
     let tokenAge = '';
 
-    // Find ATH and calculate age in parallel
-    const [athData, ageData] = await Promise.all([
-      new Promise<{ maxPrice: number; maxPriceTimestamp: number }>((resolve) => {
-        for (const candle of candles) {
-          if (candle.high > maxPrice) {
-            maxPrice = candle.high;
-            maxPriceTimestamp = candle.timestamp;
-          }
-        }
-        resolve({ maxPrice, maxPriceTimestamp });
-      }),
-      new Promise<string>((resolve) => {
-        const firstCandle = candles[candles.length - 1];
-        if (firstCandle) {
-          const firstTimestamp = firstCandle.timestamp * 1000;
-          const now = Date.now();
-          const ageInDays = Math.floor((now - firstTimestamp) / (1000 * 60 * 60 * 24));
-          
-          if (ageInDays < 1) {
-            tokenAge = 'Less than a day';
-          } else if (ageInDays === 1) {
-            tokenAge = '1 day';
-          } else if (ageInDays < 30) {
-            tokenAge = `${ageInDays} days`;
-          } else if (ageInDays < 365) {
-            const months = Math.floor(ageInDays / 30);
-            tokenAge = `${months} month${months > 1 ? 's' : ''}`;
-          } else {
-            const years = Math.floor(ageInDays / 365);
-            const remainingMonths = Math.floor((ageInDays % 365) / 30);
-            tokenAge = `${years} year${years > 1 ? 's' : ''}${remainingMonths > 0 ? ` ${remainingMonths} month${remainingMonths > 1 ? 's' : ''}` : ''}`;
-          }
-        }
-        resolve(tokenAge);
-      })
-    ]);
+    // Validate and calculate ATH from both daily and hourly candles
+    for (const candle of [...dailyCandles, ...hourlyCandles]) {
+      if (validatePrice(candle.high) && candle.high > maxPrice) {
+        maxPrice = candle.high;
+        maxPriceTimestamp = candle.timestamp;
+      }
+    }
+
+    // Validate and check current price against ATH
+    const currentPrice = parseFloat(pair.priceUsd);
+    if (validatePrice(currentPrice) && currentPrice > maxPrice) {
+      maxPrice = currentPrice;
+      maxPriceTimestamp = Math.floor(Date.now() / 1000);
+    }
+
+    // Calculate token age using pair creation time or first candle
+    const firstCandle = dailyCandles[dailyCandles.length - 1];
+    const firstTimestamp = firstCandle && validateTimestamp(firstCandle.timestamp * 1000) 
+      ? firstCandle.timestamp * 1000 
+      : Date.now();
+    
+    const now = Date.now();
+    const ageInSeconds = Math.floor((now - firstTimestamp) / 1000);
+    
+    if (ageInSeconds < TIME_THRESHOLDS.MINUTE) {
+      tokenAge = `${ageInSeconds}s`;
+    } else if (ageInSeconds < TIME_THRESHOLDS.HOUR) {
+      const minutes = Math.floor(ageInSeconds / TIME_THRESHOLDS.MINUTE);
+      tokenAge = `${minutes}m`;
+    } else if (ageInSeconds < TIME_THRESHOLDS.DAY) {
+      const hours = Math.floor(ageInSeconds / TIME_THRESHOLDS.HOUR);
+      tokenAge = `${hours}h`;
+    } else if (ageInSeconds < TIME_THRESHOLDS.WEEK) {
+      const days = Math.floor(ageInSeconds / TIME_THRESHOLDS.DAY);
+      tokenAge = `${days}d`;
+    } else if (ageInSeconds < TIME_THRESHOLDS.MONTH) {
+      const weeks = Math.floor(ageInSeconds / TIME_THRESHOLDS.WEEK);
+      tokenAge = `${weeks}w`;
+    } else if (ageInSeconds < TIME_THRESHOLDS.YEAR) {
+      const months = Math.floor(ageInSeconds / TIME_THRESHOLDS.MONTH);
+      tokenAge = `${months}mo`;
+    } else {
+      const years = Math.floor(ageInSeconds / TIME_THRESHOLDS.YEAR);
+      const remainingMonths = Math.floor((ageInSeconds % TIME_THRESHOLDS.YEAR) / TIME_THRESHOLDS.MONTH);
+      tokenAge = `${years}y${remainingMonths > 0 ? ` ${remainingMonths}mo` : ''}`;
+    }
+
+    // If we found an ATH, format the date
+    const athDate = maxPrice > 0 ? formatTimeAgo(new Date(maxPriceTimestamp * 1000)) : '';
 
     const result = {
-      ath: athData.maxPrice > 0 ? athData.maxPrice : undefined,
-      athDate: athData.maxPrice > 0 ? formatTimeAgo(new Date(athData.maxPriceTimestamp * 1000)) : '',
+      ath: maxPrice > 0 ? maxPrice : undefined,
+      athDate,
       tokenAge
     };
+
+    console.log(`Historical data for ${pairAddress}:`, {
+      ath: result.ath,
+      athDate: result.athDate,
+      tokenAge: result.tokenAge,
+      currentPrice,
+      maxPrice,
+      firstTimestamp: new Date(firstTimestamp).toISOString(),
+      lastUpdate: new Date().toISOString()
+    });
 
     // Cache the result for 5 minutes
     cache.set(cacheKey, result);
@@ -515,12 +665,14 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
       `${DEXSCREENER_API}/dex/tokens/${tokenContract}`
     ));
 
-    if (!response.data?.pairs?.length) {
+    const responseData = response.data as DexScreenerResponse;
+
+    if (!responseData?.pairs?.length) {
       console.log(`No pairs found for token ${tokenContract}`);
       return null;
     }
 
-    const validPairs = filterValidPairs(response.data.pairs, chain);
+    const validPairs = filterValidPairs(responseData.pairs, chain);
     if (!validPairs.length) return null;
 
     const pair = validPairs[0];
@@ -529,46 +681,48 @@ export async function getTokenAnalysis(tokenContract: string, chain: Chain): Pro
     // Fetch historical data
     const { ath, athDate, tokenAge } = await fetchHistoricalData(pair);
 
+    // Get the best pair for price and liquidity
+    const bestPair = validPairs.reduce((best, current) => {
+      if (!best.liquidity?.usd || (current.liquidity?.usd || 0) > best.liquidity.usd) {
+        return current;
+      }
+      return best;
+    });
+
     const analysis: TokenAnalysis = {
       chainId: pair.chainId,
       symbol: symbol,
       name: pair.baseToken.name,
-      priceUsd: adjustPrice(parseFloat(pair.priceUsd), symbol),
-      priceChange24h: pair.priceChange?.h24 || 0,
-      priceChange1h: pair.priceChange?.h1 || 0,
+      priceUsd: adjustPrice(parseFloat(bestPair.priceUsd), symbol),
+      priceChange24h: bestPair.priceChange?.h24 || 0,
+      priceChange1h: bestPair.priceChange?.h1 || 0,
       liquidity: {
-        usd: pair.liquidity?.usd,
-        change24h: pair.liquidity?.change24h
+        usd: bestPair.liquidity?.usd,
+        change24h: bestPair.liquidity?.change24h
       },
       volume: {
-        h24: pair.volume?.h24,
-        h6: pair.volume?.h6,
-        h1: pair.volume?.h1
+        h24: bestPair.volume?.h24,
+        h6: bestPair.volume?.h6,
+        h1: bestPair.volume?.h1
       },
       transactions: {
-        buys24h: pair.txns?.h24?.buys || 0,
-        sells24h: pair.txns?.h24?.sells || 0
+        buys24h: bestPair.txns?.h24?.buys || 0,
+        sells24h: bestPair.txns?.h24?.sells || 0
       },
-      fdv: pair.fdv,
-      marketCap: pair.marketCap,
+      fdv: bestPair.fdv,
+      marketCap: bestPair.marketCap,
       ath,
       athDate,
       age: tokenAge,
-      holders: [
-        { address: "0x1234...5678", percentage: 15.5 },
-        { address: "0x8765...4321", percentage: 12.3 },
-        { address: "0xabcd...efgh", percentage: 8.7 },
-        { address: "0x9876...5432", percentage: 6.2 },
-        { address: "0xijkl...mnop", percentage: 4.8 }
-      ],
-      securityStatus: {
-        liquidityLocked: true,
-        mintable: false
+      holders: pair.holders || [],
+      securityStatus: pair.security || {
+        liquidityLocked: false,
+        mintable: true
       },
-      website: "https://example.com",
-      twitter: "https://twitter.com/example",
+      website: pair.baseToken.website,
+      twitter: pair.baseToken.twitter,
       logo: getDexScreenerLogoUrl(tokenContract, chain),
-      priceDifferential: pair.priceDifferential,
+      priceDifferential: bestPair.priceDifferential,
       dexscreenerUrl: `https://dexscreener.com/${chain}/${tokenContract}`,
       googleLensUrl: getGoogleLensUrl(tokenContract, chain)
     };
