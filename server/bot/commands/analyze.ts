@@ -179,15 +179,15 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
         name: '🔗 __Quick Links__',
         value: [
           `[📊 Chart](${analysis.dexscreenerUrl}) • [🐦 Twitter](${analysis.twitter}) • [🔍 Similar Logos](${analysis.googleLensUrl})`,
-          `[🔎 Token Explorer](https://x.com/search?q=${tokenContract}&src=typed_query)`
+          `[🔎 Tweets About ](https://x.com/search?q=${tokenContract}&src=typed_query)`
         ].join('\n'),
         inline: false
       }
     )
     .setTimestamp()
     .setFooter({ 
-      text: `Powered by DeFi Analytics • Real-time market data`,
-      iconURL: 'https://i.imgur.com/AfFp7pu.png'
+      text: `Powered by TBD Chefs 👨‍🍳 • Real-time market data`,
+      iconURL: 'https://i.imgur.com/ZxIc8Gc'
     });
 }
 
