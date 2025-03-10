@@ -187,7 +187,7 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
     .setTimestamp()
     .setFooter({ 
       text: `Powered by TBD Chefs 👨‍🍳 • Real-time market data`,
-      iconURL: 'https://i.imgur.com/ZxIc8Gc'
+      iconURL: 'https://i.imgur.com/zzz'
     });
 }
 
