@@ -191,7 +191,7 @@ export function createTokenEmbed(analysis: any, tokenContract: string, chain: st
     )
     .setTimestamp()
     .setFooter({ 
-      text: `Powered by DeFi Analytics • Real-time market data`,
+      text: `TBD • Real-time market data`,
       iconURL: 'https://i.imgur.com/AfFp7pu.png'
     });
 }
